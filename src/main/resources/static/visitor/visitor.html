@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitante - Tech-Park UQ</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/visitor.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="visitor-container">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="navbar-content">
+                <h1>🎡 TECH-PARK UQ</h1>
+                <div class="nav-right">
+                    <div class="user-profile">
+                        <span id="visitorName">Usuario</span>
+                        <span id="balanceDisplay" class="balance">Saldo: $0.00</span>
+                    </div>
+                    <button onclick="logout()" class="btn-logout">Salir</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('mapa')">
+                <i class="fas fa-map"></i> Mapa
+            </button>
+            <button class="tab-btn" onclick="switchTab('atracciones')">
+                <i class="fas fa-ticket-alt"></i> Atracciones
+            </button>
+            <button class="tab-btn" onclick="switchTab('favoritos')">
+                <i class="fas fa-heart"></i> Favoritos
+            </button>
+            <button class="tab-btn" onclick="switchTab('fila')">
+                <i class="fas fa-queue"></i> Mi Fila
+            </button>
+            <button class="tab-btn" onclick="switchTab('historial')">
+                <i class="fas fa-history"></i> Historial
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Mapa Section -->
+            <section id="mapa" class="tab-content active">
+                <div class="section-header">
+                    <h2>Mapa del Parque</h2>
+                </div>
+
+                <div class="map-section">
+                    <canvas id="visitorMap" width="900" height="600"></canvas>
+                    <div class="map-info">
+                        <h3>Información de Ubicación</h3>
+                        <p>Haz click en una atracción para obtener más información y rutas.</p>
+                    </div>
+                </div>
+
+                <div id="routeInfo" class="route-info" style="display:none;">
+                    <h3>Ruta Recomendada</h3>
+                    <div id="routeList"></div>
+                </div>
+            </section>
+
+            <!-- Atracciones Section -->
+            <section id="atracciones" class="tab-content">
+                <div class="section-header">
+                    <h2>Atracciones Disponibles</h2>
+                </div>
+
+                <div class="attractions-grid" id="attractionsGrid">
+                </div>
+            </section>
+
+            <!-- Favoritos Section -->
+            <section id="favoritos" class="tab-content">
+                <div class="section-header">
+                    <h2>Mis Atracciones Favoritas</h2>
+                </div>
+
+                <div class="favorites-grid" id="favoritesGrid">
+                </div>
+            </section>
+
+            <!-- Mi Fila Section -->
+            <section id="fila" class="tab-content">
+                <div class="section-header">
+                    <h2>Mi Posición en la Fila</h2>
+                </div>
+
+                <div class="queue-info" id="queueInfo">
+                    <p>No estás en ninguna fila actualmente.</p>
+                </div>
+            </section>
+
+            <!-- Historial Section -->
+            <section id="historial" class="tab-content">
+                <div class="section-header">
+                    <h2>Historial de Visitas</h2>
+                </div>
+
+                <div class="history-list" id="historyList">
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal para detalles de atracción -->
+    <div id="attractionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('attractionModal')">&times;</span>
+            <div id="attractionDetails"></div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="joinQueue()">Unirse a la Fila</button>
+                <button class="btn-secondary" onclick="toggleFavorite()">❤️ Favorito</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/visitor.js"></script>
+</body>
+</html>

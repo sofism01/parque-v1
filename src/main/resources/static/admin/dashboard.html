@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🎡 TECH-PARK</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="#atracciones" class="nav-link"><i class="fas fa-ticket-alt"></i> Atracciones</a></li>
+                    <li><a href="#zonas" class="nav-link"><i class="fas fa-map"></i> Zonas</a></li>
+                    <li><a href="#operadores" class="nav-link"><i class="fas fa-users"></i> Operadores</a></li>
+                    <li><a href="#reportes" class="nav-link"><i class="fas fa-chart-bar"></i> Reportes</a></li>
+                    <li><a href="#alertas" class="nav-link"><i class="fas fa-bell"></i> Alertas</a></li>
+                    <li><a href="#mapa" class="nav-link"><i class="fas fa-map-location-dot"></i> Mapa</a></li>
+                    <li><a href="#" onclick="logout()" class="nav-link"><i class="fas fa-sign-out-alt"></i> Salir</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar-content">
+                    <h1>Panel de Administración - Tech-Park UQ</h1>
+                    <div class="user-info">
+                        <span id="userDisplay">Usuario: <span id="username"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <div class="section-header">
+                    <h2>Dashboard Principal</h2>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <h3>Visitantes Totales</h3>
+                            <p class="stat-value" id="totalVisitors">0</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <h3>Ingresos Diarios</h3>
+                            <p class="stat-value" id="dailyRevenue">$0.00</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">🎢</div>
+                        <div class="stat-content">
+                            <h3>Atracciones Activas</h3>
+                            <p class="stat-value" id="activeAttractions">0</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">⚠️</div>
+                        <div class="stat-content">
+                            <h3>Alertas</h3>
+                            <p class="stat-value" id="alertCount">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Atracciones Section -->
+            <section id="atracciones" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Atracciones</h2>
+                    <button class="btn-primary" onclick="showAddAttractionForm()">+ Nueva Atracción</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="attractionsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Visitantes</th>
+                                <th>Estado</th>
+                                <th>Tiempo Espera</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attractionsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Zonas Section -->
+            <section id="zonas" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Zonas</h2>
+                    <button class="btn-primary" onclick="showAddZoneForm()">+ Nueva Zona</button>
+                </div>
+
+                <div class="zones-grid" id="zonesGrid">
+                </div>
+            </section>
+
+            <!-- Operadores Section -->
+            <section id="operadores" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Operadores</h2>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="operatorsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Email</th>
+                                <th>Zona Asignada</th>
+                                <th>Atracciones</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="operatorsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Reportes Section -->
+            <section id="reportes" class="section">
+                <div class="section-header">
+                    <h2>Reportes</h2>
+                    <button class="btn-primary" onclick="generateDailyReport()">Generar Reporte del Día</button>
+                </div>
+
+                <div class="report-container" id="reportContainer">
+                    <p>Selecciona una opción para generar reportes</p>
+                </div>
+            </section>
+
+            <!-- Alertas Section -->
+            <section id="alertas" class="section">
+                <div class="section-header">
+                    <h2>Sistema de Alertas</h2>
+                </div>
+
+                <div class="alerts-grid">
+                    <button class="alert-btn" onclick="triggerWeatherAlert()">
+                        <i class="fas fa-cloud-bolt"></i> Alerta de Tormenta
+                    </button>
+                    <button class="alert-btn" onclick="triggerMaintenanceCheck()">
+                        <i class="fas fa-wrench"></i> Revisar Mantenimiento
+                    </button>
+                </div>
+
+                <div id="alertsList" class="alerts-list"></div>
+            </section>
+
+            <!-- Mapa Section -->
+            <section id="mapa" class="section">
+                <div class="section-header">
+                    <h2>Mapa Interactivo del Parque</h2>
+                </div>
+
+                <div class="map-container">
+                    <canvas id="parkMap" width="800" height="600"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal para agregar atracción -->
+    <div id="attractionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('attractionModal')">&times;</span>
+            <h2>Nueva Atracción</h2>
+            <form id="attractionForm" onsubmit="saveAttraction(event)">
+                <input type="text" id="attractionName" placeholder="Nombre" required>
+                <select id="attractionType" required>
+                    <option value="">Seleccionar tipo</option>
+                    <option value="MECANICA">Mecánica</option>
+                    <option value="ACUATICA">Acuática</option>
+                    <option value="INFANTIL">Infantil</option>
+                </select>
+                <input type="number" id="attractionCapacity" placeholder="Capacidad" required>
+                <input type="number" id="attractionMinHeight" placeholder="Altura mínima (m)" required>
+                <input type="number" id="attractionMinAge" placeholder="Edad mínima" required>
+                <input type="number" id="attractionCost" placeholder="Costo adicional" required>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para agregar zona -->
+    <div id="zoneModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('zoneModal')">&times;</span>
+            <h2>Nueva Zona</h2>
+            <form id="zoneForm" onsubmit="saveZone(event)">
+                <input type="text" id="zoneName" placeholder="Nombre" required>
+                <input type="number" id="zoneCapacity" placeholder="Capacidad máxima" required>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/admin.js"></script>
+</body>
+</html>
