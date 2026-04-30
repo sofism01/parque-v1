@@ -26,6 +26,7 @@ public class Visitor extends User {
     private LinkedList<Long> visitHistory;
     private List<String> notifications;
     private int positionInQueue;
+    private Long currentQueueAttractionId;
 
     public Visitor(String username, String password, String email) {
         super(null, username, password, email, "VISITOR", true, null);
@@ -35,6 +36,7 @@ public class Visitor extends User {
         this.virtualBalance = 0.0;
         this.ticketType = TicketType.GENERAL;
         this.positionInQueue = -1;
+        this.currentQueueAttractionId = null;
     }
 
     public void addFavorite(Long attractionId) {

@@ -118,6 +118,56 @@ public class QueueService {
         return stats;
     }
 
+    public QueueEntry findVisitorEntry(Long attractionId, Long visitorId) {
+        if (attractionId == null || visitorId == null) {
+            return null;
+        }
+
+        for (QueueEntry entry : getFullQueue(attractionId)) {
+            if (visitorId.equals(entry.getVisitorId())) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    public void restoreQueues(Map<Long, List<QueueEntry>> queuesByAttraction) {
+        attractionQueues.clear();
+        visitorPositionsByAttraction.clear();
+
+        if (queuesByAttraction == null) {
+            return;
+        }
+
+        for (Map.Entry<Long, List<QueueEntry>> queueEntry : queuesByAttraction.entrySet()) {
+            Long attractionId = queueEntry.getKey();
+            if (attractionId == null) {
+                continue;
+            }
+
+            PriorityQueue<QueueEntry> rebuiltQueue = new PriorityQueue<>();
+            List<QueueEntry> entries = queueEntry.getValue();
+            if (entries != null) {
+                for (QueueEntry entry : entries) {
+                    if (entry != null) {
+                        rebuiltQueue.enqueue(entry);
+                    }
+                }
+            }
+
+            attractionQueues.put(attractionId, rebuiltQueue);
+            updatePositions(attractionId);
+        }
+    }
+
+    public Map<Long, List<QueueEntry>> snapshotQueues() {
+        Map<Long, List<QueueEntry>> snapshot = new HashMap<>();
+        for (Map.Entry<Long, PriorityQueue<QueueEntry>> entry : attractionQueues.entrySet()) {
+            snapshot.put(entry.getKey(), entry.getValue().getAllElements());
+        }
+        return snapshot;
+    }
+
     public List<QueueEntry> cancelQueue(Long attractionId) {
         List<QueueEntry> cancelledEntries = getFullQueue(attractionId);
         clearQueue(attractionId);

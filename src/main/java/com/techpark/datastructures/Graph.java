@@ -27,8 +27,39 @@ public class Graph<T> {
         addNode(source);
         addNode(destination);
 
-        adjacencyList.get(source).add(new Edge<>(destination, weight));
-        adjacencyList.get(destination).add(new Edge<>(source, weight));
+        if (!hasEdge(source, destination)) {
+            adjacencyList.get(source).add(new Edge<>(destination, weight));
+        }
+        if (!hasEdge(destination, source)) {
+            adjacencyList.get(destination).add(new Edge<>(source, weight));
+        }
+    }
+
+    public void removeNode(T node) {
+        if (node == null) {
+            return;
+        }
+
+        adjacencyList.remove(node);
+        for (List<Edge<T>> edges : adjacencyList.values()) {
+            edges.removeIf(edge -> node.equals(edge.destination));
+        }
+    }
+
+    public void removeEdge(T source, T destination) {
+        if (source == null || destination == null) {
+            return;
+        }
+
+        List<Edge<T>> sourceEdges = adjacencyList.get(source);
+        if (sourceEdges != null) {
+            sourceEdges.removeIf(edge -> destination.equals(edge.destination));
+        }
+
+        List<Edge<T>> destinationEdges = adjacencyList.get(destination);
+        if (destinationEdges != null) {
+            destinationEdges.removeIf(edge -> source.equals(edge.destination));
+        }
     }
 
     public List<Edge<T>> getNeighbors(T node) {
@@ -122,6 +153,29 @@ public class Graph<T> {
 
     public Set<T> getAllNodes() {
         return adjacencyList.keySet();
+    }
+
+    public boolean hasEdge(T source, T destination) {
+        if (source == null || destination == null) {
+            return false;
+        }
+        List<Edge<T>> edges = adjacencyList.get(source);
+        if (edges == null) {
+            return false;
+        }
+        for (Edge<T> edge : edges) {
+            if (destination.equals(edge.destination)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean esAislado(T node) {
+        if (node == null || !adjacencyList.containsKey(node)) {
+            return true;
+        }
+        return bfs(node).size() < adjacencyList.size();
     }
 
     private List<T> reconstructPath(T start, T end, Map<T, T> predecessors) {

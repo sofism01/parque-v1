@@ -20,6 +20,8 @@ public class Zone {
     private int currentOccupancy;
     private LinkedList<Long> operatorIds;
     private List<Long> attractionIds;
+    private Double posX;
+    private Double posY;
 
     public Zone(String name, int maxCapacity) {
         this.name = name;
@@ -27,6 +29,8 @@ public class Zone {
         this.currentOccupancy = 0;
         this.operatorIds = new LinkedList<>();
         this.attractionIds = new java.util.ArrayList<>();
+        this.posX = null;
+        this.posY = null;
     }
 
     public void addOperator(Long operatorId) {

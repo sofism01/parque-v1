@@ -22,7 +22,9 @@ public class Attraction implements Comparable<Attraction> {
     private int estimatedWaitTime;
     private AttractionStatus status;
     private ClosureReason closureReason;
+    private boolean climateOverrideActive;
     private Long zoneId;
+    private Zone zone;
     private Double posX;
     private Double posY;
 
@@ -43,6 +45,7 @@ public class Attraction implements Comparable<Attraction> {
         this.estimatedWaitTime = 0;
         this.status = AttractionStatus.ACTIVA;
         this.closureReason = ClosureReason.NINGUNO;
+        this.climateOverrideActive = false;
     }
 
     public boolean needsMaintenance() {
@@ -61,6 +64,7 @@ public class Attraction implements Comparable<Attraction> {
         accumulatedVisitors = 0;
         status = AttractionStatus.ACTIVA;
         closureReason = ClosureReason.NINGUNO;
+        climateOverrideActive = false;
     }
 
     public void changeStatus(AttractionStatus newStatus, ClosureReason reason) {

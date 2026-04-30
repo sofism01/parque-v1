@@ -1,19 +1,12 @@
 package com.techpark;
 
 import com.google.gson.Gson;
-import com.techpark.config.SpringFxmlLoader;
-import com.techpark.controller.DataImportController;
 import com.techpark.datastructures.Graph;
 import com.techpark.model.Attraction;
 import com.techpark.model.AttractionStatus;
 import com.techpark.model.AttractionType;
 import com.techpark.model.ClosureReason;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
+import com.techpark.service.ParkDataBootstrapService;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -23,51 +16,29 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@SpringBootApplication
-public class TechParkApplication extends Application {
+@SpringBootApplication(scanBasePackages = "com.techpark")
+public class TechParkApplication {
     private static ConfigurableApplicationContext applicationContext;
-    private static String[] launchArgs;
 
-    public static void main(String[] args) {
-        launchArgs = args;
+    public static void main(String[] args) { 
         runDiagnostics();
-        launch(args);
-    }
 
-    @Override
-    public void init() throws Exception {
         applicationContext = new SpringApplicationBuilder(TechParkApplication.class)
                 .headless(false)
-                .run(launchArgs);
+                .run(args);
 
-        applicationContext.getBean(DataImportController.class).importDataResource("/data/data.json");
+        applicationContext.getBean(ParkDataBootstrapService.class).importDataResource("/data/data.json");
+        launchDesktopUiSafely(args);
     }
 
-    @Override
-    public void start(Stage stage) throws Exception {
-        SpringFxmlLoader springFxmlLoader = applicationContext.getBean(SpringFxmlLoader.class);
-        FXMLLoader loader = springFxmlLoader.load("/fxml/main-view.fxml");
-        Parent root = loader.getRoot();
-
-        Scene scene = new Scene(root, 1024, 768);
-        stage.setTitle("Tech-Park UQ");
-        stage.setScene(scene);
-        stage.setMinWidth(1024);
-        stage.setMinHeight(768);
-        stage.show();
-    }
-
-    @Override
-    public void stop() {
-        if (applicationContext != null) {
-            applicationContext.close();
-        }
-        Platform.exit();
+    public static ConfigurableApplicationContext getApplicationContext() {
+        return applicationContext;
     }
 
     @Bean
@@ -81,6 +52,18 @@ public class TechParkApplication extends Application {
                         .allowedHeaders("*");
             }
         };
+    }
+
+    private static void launchDesktopUiSafely(String[] args) {
+        try {
+            Class<?> desktopAppClass = Class.forName("com.techpark.TechParkDesktopApplication");
+            Method launchMethod = desktopAppClass.getMethod("launchDesktop", String[].class);
+            launchMethod.invoke(null, (Object) args);
+        } catch (Throwable throwable) {
+            System.err.println("JavaFX no disponible. El servidor Spring Boot continua en el puerto 8080.");
+            Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
+            System.err.println(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+        }
     }
 
     private static void runDiagnostics() {
@@ -123,16 +106,16 @@ public class TechParkApplication extends Application {
             if (!path.isEmpty()
                     && path.get(0).equals(farthestPair[0])
                     && path.get(path.size() - 1).equals(farthestPair[1])) {
-                System.out.println("--- DIAGNÓSTICO DE ESTRUCTURAS: OK ---");
+                System.out.println("--- DIAGNOSTICO DE ESTRUCTURAS: OK ---");
                 return;
             }
         } catch (Exception exception) {
-            System.err.println("--- DIAGNÓSTICO DE ESTRUCTURAS: FAIL ---");
+            System.err.println("--- DIAGNOSTICO DE ESTRUCTURAS: FAIL ---");
             exception.printStackTrace(System.err);
             return;
         }
 
-        System.err.println("--- DIAGNÓSTICO DE ESTRUCTURAS: FAIL ---");
+        System.err.println("--- DIAGNOSTICO DE ESTRUCTURAS: FAIL ---");
     }
 
     private static Attraction[] resolveFarthestPair(Map<Long, Attraction> attractionsById) {

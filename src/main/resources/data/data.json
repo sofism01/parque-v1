@@ -1,8 +1,56 @@
 {
   "zones": [
-    { "id": 1, "name": "Aventura", "maxCapacity": 600 },
-    { "id": 2, "name": "Infantil", "maxCapacity": 400 },
-    { "id": 3, "name": "Acuatica", "maxCapacity": 500 }
+    {
+      "id": 1,
+      "name": "Aventura",
+      "maxCapacity": 600,
+      "operatorIds": [
+        2
+      ],
+      "attractionIds": [
+        1,
+        2,
+        5
+      ],
+      "posX": 150.0,
+      "posY": 100.0
+    },
+    {
+      "id": 2,
+      "name": "Infantil",
+      "maxCapacity": 400,
+      "operatorIds": [],
+      "attractionIds": [
+        4,
+        10
+      ],
+      "posX": 150.0,
+      "posY": 400.0
+    },
+    {
+      "id": 3,
+      "name": "Acuatica",
+      "maxCapacity": 500,
+      "operatorIds": [],
+      "attractionIds": [
+        3,
+        6
+      ],
+      "posX": 500.0,
+      "posY": 300.0
+    },
+    {
+      "id": 4,
+      "name": "Extrema",
+      "maxCapacity": 5,
+      "operatorIds": [],
+      "attractionIds": [
+        7,
+        9
+      ],
+      "posX": 600.0,
+      "posY": 100.0
+    }
   ],
   "attractions": [
     {
@@ -16,10 +64,11 @@
       "zoneId": 1,
       "status": "ACTIVA",
       "closureReason": "NINGUNO",
+      "climateOverrideActive": false,
       "accumulatedVisitors": 180,
       "estimatedWaitTime": 18,
-      "posX": 90,
-      "posY": 120
+      "posX": 120.0,
+      "posY": 120.0
     },
     {
       "id": 2,
@@ -32,10 +81,11 @@
       "zoneId": 1,
       "status": "ACTIVA",
       "closureReason": "NINGUNO",
+      "climateOverrideActive": true,
       "accumulatedVisitors": 260,
       "estimatedWaitTime": 22,
-      "posX": 250,
-      "posY": 70
+      "posX": 180.0,
+      "posY": 80.0
     },
     {
       "id": 3,
@@ -48,10 +98,11 @@
       "zoneId": 3,
       "status": "ACTIVA",
       "closureReason": "NINGUNO",
+      "climateOverrideActive": true,
       "accumulatedVisitors": 310,
       "estimatedWaitTime": 20,
-      "posX": 430,
-      "posY": 150
+      "posX": 480.0,
+      "posY": 280.0
     },
     {
       "id": 4,
@@ -64,10 +115,11 @@
       "zoneId": 2,
       "status": "ACTIVA",
       "closureReason": "NINGUNO",
+      "climateOverrideActive": false,
       "accumulatedVisitors": 140,
       "estimatedWaitTime": 8,
-      "posX": 150,
-      "posY": 310
+      "posX": 150.0,
+      "posY": 420.0
     },
     {
       "id": 5,
@@ -80,10 +132,11 @@
       "zoneId": 1,
       "status": "ACTIVA",
       "closureReason": "NINGUNO",
+      "climateOverrideActive": false,
       "accumulatedVisitors": 90,
       "estimatedWaitTime": 12,
-      "posX": 320,
-      "posY": 360
+      "posX": 200.0,
+      "posY": 130.0
     },
     {
       "id": 6,
@@ -96,21 +149,143 @@
       "zoneId": 3,
       "status": "ACTIVA",
       "closureReason": "NINGUNO",
+      "climateOverrideActive": true,
       "accumulatedVisitors": 210,
       "estimatedWaitTime": 16,
-      "posX": 470,
-      "posY": 430
+      "posX": 530.0,
+      "posY": 330.0
+    },
+    {
+      "id": 7,
+      "name": "Carros chocones",
+      "type": "MECANICA",
+      "maxCapacityPerCycle": 15,
+      "minHeight": 1.0,
+      "minAge": 1,
+      "additionalCost": 1.0,
+      "zoneId": 4,
+      "status": "ACTIVA",
+      "closureReason": "NINGUNO",
+      "climateOverrideActive": false,
+      "accumulatedVisitors": 0,
+      "estimatedWaitTime": 0,
+      "posX": 720.0,
+      "posY": 100.0
+    },
+    {
+      "id": 9,
+      "name": "chocones",
+      "type": "MECANICA",
+      "maxCapacityPerCycle": 1,
+      "minHeight": 1.0,
+      "minAge": 1,
+      "additionalCost": 1.0,
+      "zoneId": 4,
+      "status": "ACTIVA",
+      "closureReason": "NINGUNO",
+      "climateOverrideActive": false,
+      "accumulatedVisitors": 0,
+      "estimatedWaitTime": 0,
+      "posX": 684.8528137423857,
+      "posY": 184.8528137423857
+    },
+    {
+      "id": 10,
+      "name": "niño",
+      "type": "INFANTIL",
+      "maxCapacityPerCycle": 1,
+      "minHeight": 1.0,
+      "minAge": 1,
+      "additionalCost": 1.0,
+      "zoneId": 2,
+      "status": "ACTIVA",
+      "closureReason": "NINGUNO",
+      "climateOverrideActive": false,
+      "accumulatedVisitors": 0,
+      "estimatedWaitTime": 0,
+      "posX": 270.0,
+      "posY": 400.0
     }
   ],
   "connections": [
-    { "sourceId": 1, "destinationId": 2, "weight": 170 },
-    { "sourceId": 1, "destinationId": 4, "weight": 210 },
-    { "sourceId": 2, "destinationId": 3, "weight": 200 },
-    { "sourceId": 2, "destinationId": 5, "weight": 290 },
-    { "sourceId": 3, "destinationId": 5, "weight": 240 },
-    { "sourceId": 3, "destinationId": 6, "weight": 160 },
-    { "sourceId": 4, "destinationId": 5, "weight": 190 },
-    { "sourceId": 5, "destinationId": 6, "weight": 180 },
-    { "sourceId": 4, "destinationId": 6, "weight": 360 }
+    {
+      "sourceId": 1,
+      "destinationId": 4,
+      "weight": 301
+    },
+    {
+      "sourceId": 1,
+      "destinationId": 5,
+      "weight": 81
+    },
+    {
+      "sourceId": 2,
+      "destinationId": 5,
+      "weight": 54
+    },
+    {
+      "sourceId": 3,
+      "destinationId": 6,
+      "weight": 71
+    },
+    {
+      "sourceId": 3,
+      "destinationId": 7,
+      "weight": 241
+    },
+    {
+      "sourceId": 3,
+      "destinationId": 10,
+      "weight": 242
+    },
+    {
+      "sourceId": 4,
+      "destinationId": 5,
+      "weight": 294
+    },
+    {
+      "sourceId": 4,
+      "destinationId": 10,
+      "weight": 122
+    },
+    {
+      "sourceId": 5,
+      "destinationId": 6,
+      "weight": 386
+    },
+    {
+      "sourceId": 6,
+      "destinationId": 7,
+      "weight": 298
+    },
+    {
+      "sourceId": 6,
+      "destinationId": 9,
+      "weight": 212
+    },
+    {
+      "sourceId": 7,
+      "destinationId": 9,
+      "weight": 92
+    }
+  ],
+  "operators": [
+    {
+      "id": 2,
+      "username": "ll",
+      "password": "d",
+      "email": "d@dd.com",
+      "active": true,
+      "zoneId": 1,
+      "assignedAttractionsIds": []
+    },
+    {
+      "id": 3,
+      "username": "juano",
+      "password": "1",
+      "email": "juano@gmail.com",
+      "active": true,
+      "assignedAttractionsIds": []
+    }
   ]
 }
