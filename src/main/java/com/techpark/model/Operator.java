@@ -3,6 +3,7 @@ package com.techpark.model;
 import com.techpark.datastructures.LinkedList;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = false)
 public class Operator extends User {
     private Long zoneId; // Zona asignada
     private LinkedList<Long> assignedAttractionsIds; // IDs de atracciones asignadas

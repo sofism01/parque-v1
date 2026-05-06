@@ -53,7 +53,7 @@
       "status": "ACTIVA",
       "closureReason": "NINGUNO",
       "climateOverrideActive": false,
-      "accumulatedVisitors": 180,
+      "accumulatedVisitors": 499,
       "estimatedWaitTime": 18,
       "posX": 120.0,
       "posY": 120.0
@@ -216,5 +216,6 @@
       "active": true,
       "assignedAttractionsIds": []
     }
-  ]
+  ],
+  "ingresosTotales": 0.0
 }

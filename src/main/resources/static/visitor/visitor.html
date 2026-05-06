@@ -4,168 +4,235 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel del Visitante</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="visitor.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="visitor-layout">
-        <header class="visitor-header">
-            <div>
-                <p class="eyebrow">Panel del Visitante</p>
-                <h1>Tech-Park UQ</h1>
-                <p id="profileMeta" class="header-copy">Cargando perfil del visitante...</p>
-            </div>
-            <div class="header-actions">
-                <div class="profile-chip">
-                    <span id="visitorName">Visitante</span>
-                    <strong id="balanceDisplay">Saldo: $0.00</strong>
+    <div class="visitor-app">
+        <aside class="visitor-sidebar" id="visitorSidebar">
+            <div class="brand-block">
+                <button class="sidebar-toggle mobile-only" type="button" onclick="toggleSidebar()" aria-label="Abrir menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="brand-mark">TP</div>
+                <div>
+                    <p class="brand-eyebrow">Visitante</p>
+                    <h1>Tech-Park UQ</h1>
                 </div>
-                <button class="btn-secondary" onclick="logout()">Salir</button>
             </div>
-        </header>
 
-        <section id="appAlert" class="app-alert" hidden></section>
+            <div class="sidebar-queue-glance">
+                <span class="sidebar-label">Fila activa</span>
+                <strong id="ticketAttraction">Sin fila activa</strong>
+                <p id="ticketStatus">Aun no tienes una fila activa.</p>
+            </div>
 
-        <section class="profile-panel">
-            <div id="profileSummary" class="profile-grid"></div>
-        </section>
+            <nav class="sidebar-nav">
+                <button class="tab-btn active" data-tab="mapa" onclick="switchTab('mapa')">
+                    <i class="fas fa-map-location-dot"></i>
+                    <span>Mapa del Parque</span>
+                </button>
+                <button class="tab-btn" data-tab="atracciones" onclick="switchTab('atracciones')">
+                    <i class="fas fa-ticket"></i>
+                    <span>Atracciones</span>
+                </button>
+                <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')">
+                    <i class="fas fa-id-card"></i>
+                    <span>Mi Ticket / Perfil</span>
+                </button>
+                <button class="tab-btn" data-tab="historial" onclick="switchTab('historial')">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    <span>Mi Historial</span>
+                </button>
+                <button class="tab-btn" data-tab="fila" onclick="switchTab('fila')">
+                    <i class="fas fa-users"></i>
+                    <span>Mi Fila</span>
+                </button>
+                <button class="tab-btn" data-tab="favoritos" onclick="switchTab('favoritos')">
+                    <i class="fas fa-heart"></i>
+                    <span>Favoritos</span>
+                </button>
+            </nav>
+        </aside>
 
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
-                <i class="fas fa-user"></i> Perfil
-            </button>
-            <button class="tab-btn" data-tab="mapa" onclick="switchTab('mapa')">
-                <i class="fas fa-map-location-dot"></i> Mapa
-            </button>
-            <button class="tab-btn" data-tab="atracciones" onclick="switchTab('atracciones')">
-                <i class="fas fa-ticket-alt"></i> Atracciones
-            </button>
-            <button class="tab-btn" data-tab="fila" onclick="switchTab('fila')">
-                <i class="fas fa-clock"></i> Fila Virtual
-            </button>
-            <button class="tab-btn" data-tab="favoritos" onclick="switchTab('favoritos')">
-                <i class="fas fa-heart"></i> Favoritos
-            </button>
-            <button class="tab-btn" data-tab="historial" onclick="switchTab('historial')">
-                <i class="fas fa-history"></i> Historial
-            </button>
-        </nav>
+        <div class="app-overlay" id="appOverlay" onclick="closeSidebar()"></div>
 
-        <main class="content-shell">
-            <section id="dashboard" class="tab-content active">
-                <div class="section-card">
-                    <div class="section-heading">
-                        <h2>Resumen del Visitante</h2>
-                        <p>Tu acceso se calcula con el ABB del backend y se refleja aqui en tiempo real.</p>
+        <div class="visitor-main">
+            <header class="visitor-topbar">
+                <div class="topbar-leading">
+                    <button class="sidebar-toggle desktop-hidden" type="button" onclick="toggleSidebar()" aria-label="Abrir menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div>
+                        <p class="eyebrow">Panel del Visitante</p>
+                        <h2 id="visitorName">Visitante</h2>
+                        <p id="profileMeta" class="header-copy">Cargando perfil del visitante...</p>
                     </div>
-                    <div class="ticket-preview">
-                        <article class="virtual-ticket">
-                            <div class="ticket-topline">
-                                <span>Ticket Virtual</span>
-                                <strong id="ticketType">GENERAL</strong>
+                </div>
+                <div class="topbar-actions">
+                    <div class="metric-pill">
+                        <span>Saldo actual</span>
+                        <strong id="balanceDisplay">$0.00</strong>
+                    </div>
+                    <button class="btn-secondary logout-btn" onclick="logout()">
+                        <i class="fas fa-right-from-bracket"></i>
+                        <span>Cerrar Sesion</span>
+                    </button>
+                </div>
+            </header>
+
+            <section id="appAlert" class="app-alert" hidden></section>
+
+            <main class="content-shell">
+                <section id="dashboard" class="tab-content">
+                    <div class="content-card hero-card">
+                        <div class="section-heading">
+                            <div>
+                                <p class="section-kicker">Mi Ticket</p>
+                                <h3>Resumen personal</h3>
+                                <p>Consulta tu ticket, saldo, requisitos fisicos y tu estado general dentro del parque.</p>
                             </div>
-                            <h3 id="ticketAttraction">Sin fila activa</h3>
-                            <div class="ticket-stats">
-                                <div>
-                                    <span>Espera estimada</span>
-                                    <strong id="ticketWait">--</strong>
+                        </div>
+
+                        <div class="ticket-preview">
+                            <article class="virtual-ticket">
+                                <div class="ticket-topline">
+                                    <span>Ticket virtual</span>
+                                    <strong id="ticketType">GENERAL</strong>
                                 </div>
-                                <div>
-                                    <span>Posicion</span>
-                                    <strong id="ticketPosition">--</strong>
+                                <h3 id="dashboardTicketTitle">Acceso al parque</h3>
+                                <div class="ticket-stats">
+                                    <div>
+                                        <span>Espera</span>
+                                        <strong id="ticketWait">--</strong>
+                                    </div>
+                                    <div>
+                                        <span>Posicion</span>
+                                        <strong id="ticketPosition">--</strong>
+                                    </div>
+                                    <div>
+                                        <span>Saldo</span>
+                                        <strong id="ticketBalance">$0.00</strong>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span>Saldo</span>
-                                    <strong id="ticketBalance">$0.00</strong>
+                                <p class="ticket-caption">Tu progreso en fila se actualiza automaticamente cada pocos segundos.</p>
+                            </article>
+
+                            <div class="profile-panel">
+                                <div class="section-heading compact">
+                                    <div>
+                                        <p class="section-kicker">Perfil</p>
+                                        <h3>Datos del visitante</h3>
+                                    </div>
                                 </div>
+                                <div id="profileSummary" class="profile-grid"></div>
                             </div>
-                            <p id="ticketStatus">Aun no tienes una fila activa.</p>
-                        </article>
-                        <div class="info-card">
-                            <h3>Reglas de acceso</h3>
-                            <p>Las atracciones recomendadas se filtran segun tu altura, edad y el estado actual del parque.</p>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section id="mapa" class="tab-content">
-                <div class="section-card">
-                    <div class="section-heading">
-                        <h2>Mapa del Parque</h2>
-                        <p>Selecciona origen y destino para ejecutar la ruta mas corta con Dijkstra.</p>
-                    </div>
-                    <div class="map-toolbar">
-                        <select id="originNode"></select>
-                        <select id="destinationNode"></select>
-                        <button class="btn-primary" onclick="calculateRoute()">Calcular Ruta</button>
-                    </div>
-                    <div class="map-grid">
-                        <div class="map-canvas-wrap">
-                            <canvas id="parkMap" width="800" height="600"></canvas>
-                        </div>
-                        <aside class="map-sidebar">
-                            <h3>Estado del mapa</h3>
-                            <p id="mapStatus">Selecciona un destino para calcular la mejor ruta disponible.</p>
-                            <div id="routeInfo" class="route-box" hidden>
-                                <h4>Ruta recomendada</h4>
-                                <div id="routeList"></div>
+                <section id="mapa" class="tab-content active">
+                    <div class="content-card">
+                        <div class="section-heading">
+                            <div>
+                                <p class="section-kicker">Navegacion</p>
+                                <h3>Mapa del Parque</h3>
+                                <p>Visualiza el grafo del parque y calcula rutas seguras desde tu ubicacion actual.</p>
                             </div>
-                        </aside>
-                    </div>
-                </div>
-            </section>
+                        </div>
 
-            <section id="atracciones" class="tab-content">
-                <div class="section-card">
-                    <div class="section-heading">
-                        <h2>Atracciones recomendadas</h2>
-                        <p>Solo se muestran atracciones compatibles con tu perfil.</p>
-                    </div>
-                    <div id="attractionsGrid" class="cards-grid"></div>
-                </div>
-            </section>
+                        <div class="map-toolbar">
+                            <div id="currentLocationBadge" class="info-chip">Ubicacion actual: --</div>
+                            <select id="destinationNode"></select>
+                            <button class="btn-primary" onclick="calculateRoute()">
+                                <i class="fas fa-route"></i>
+                                <span>Calcular ruta</span>
+                            </button>
+                        </div>
 
-            <section id="fila" class="tab-content">
-                <div class="section-card">
-                    <div class="section-heading">
-                        <h2>Fila Virtual</h2>
-                        <p>Tu posicion se actualiza automaticamente consultando la cola de prioridad del backend.</p>
+                        <div class="map-grid">
+                            <div class="map-card">
+                                <canvas id="parkMap" width="800" height="600"></canvas>
+                            </div>
+                            <aside class="map-sidebar">
+                                <h3>Estado del mapa</h3>
+                                <p id="mapStatus">Selecciona un destino para calcular la mejor ruta disponible.</p>
+                                <div id="routeInfo" class="route-box" hidden>
+                                    <h4>Ruta recomendada</h4>
+                                    <div id="routeList"></div>
+                                </div>
+                            </aside>
+                        </div>
                     </div>
-                    <div id="queueInfo" class="queue-panel">
-                        <p class="empty-state">No tienes una fila activa.</p>
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <section id="favoritos" class="tab-content">
-                <div class="section-card">
-                    <div class="section-heading">
-                        <h2>Favoritos</h2>
-                        <p>Guarda tus atracciones preferidas para acceder mas rapido.</p>
+                <section id="atracciones" class="tab-content">
+                    <div class="content-card">
+                        <div class="section-heading">
+                            <div>
+                                <p class="section-kicker">Explorar</p>
+                                <h3>Atracciones disponibles</h3>
+                                <p>Consulta estados, tiempos de espera y accede rapidamente a la fila virtual.</p>
+                            </div>
+                        </div>
+                        <div id="attractionsGrid" class="cards-grid"></div>
                     </div>
-                    <div id="favoritesGrid" class="cards-grid"></div>
-                </div>
-            </section>
+                </section>
 
-            <section id="historial" class="tab-content">
-                <div class="section-card">
-                    <div class="section-heading">
-                        <h2>Historial</h2>
-                        <p>Registro de visitas consumido desde el backend.</p>
+                <section id="fila" class="tab-content">
+                    <div class="content-card queue-focus-card">
+                        <div class="section-heading">
+                            <div>
+                                <p class="section-kicker">Seguimiento</p>
+                                <h3>Mi fila virtual</h3>
+                                <p>Observa tu progreso y el tiempo restante estimado para tu turno.</p>
+                            </div>
+                        </div>
+                        <div id="queueInfo" class="queue-panel">
+                            <p class="empty-state">No tienes una fila activa.</p>
+                        </div>
                     </div>
-                    <div id="historyList" class="history-list"></div>
-                </div>
-            </section>
-        </main>
+                </section>
+
+                <section id="favoritos" class="tab-content">
+                    <div class="content-card">
+                        <div class="section-heading">
+                            <div>
+                                <p class="section-kicker">Acceso rapido</p>
+                                <h3>Favoritos</h3>
+                                <p>Ten a mano tus atracciones preferidas y unete a ellas mas rapido.</p>
+                            </div>
+                        </div>
+                        <div id="favoritesGrid" class="cards-grid"></div>
+                    </div>
+                </section>
+
+                <section id="historial" class="tab-content">
+                    <div class="content-card">
+                        <div class="section-heading">
+                            <div>
+                                <p class="section-kicker">Recorrido</p>
+                                <h3>Mi historial</h3>
+                                <p>Revisa las atracciones que ya visitaste durante tu experiencia en el parque.</p>
+                            </div>
+                        </div>
+                        <div id="historyList" class="history-list"></div>
+                    </div>
+                </section>
+            </main>
+        </div>
     </div>
 
     <div id="attractionModal" class="modal">
         <div class="modal-content">
             <button class="close-btn" onclick="closeModal('attractionModal')">&times;</button>
             <div id="attractionDetails"></div>
+            <p id="attractionWarning" class="attraction-warning"></p>
             <div class="modal-actions">
-                <button class="btn-primary" onclick="joinQueue()">Unirse a la Fila</button>
+                <button id="joinQueueButton" class="btn-primary" onclick="joinQueue()">Unirse a la Fila</button>
                 <button class="btn-secondary" onclick="closeModal('attractionModal')">Cerrar</button>
             </div>
         </div>

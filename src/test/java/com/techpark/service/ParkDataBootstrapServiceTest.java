@@ -21,13 +21,14 @@ class ParkDataBootstrapServiceTest {
     void importData_rebuildsInvalidPersistedConnectionsAndDeduplicatesAttractions() throws Exception {
         AttractionService attractionService = new AttractionService();
         GraphService graphService = new GraphService();
+        AuthService authService = new AuthService();
         ReflectionTestUtils.setField(graphService, "attractionService", attractionService);
 
         ParkDataBootstrapService bootstrapService = new ParkDataBootstrapService(
                 attractionService,
                 graphService,
-                new AuthService(),
-                new QueueService()
+                authService,
+                new QueueService(attractionService, authService)
         );
 
         Path tempFile = Files.createTempFile("techpark-import-", ".json");

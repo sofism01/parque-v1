@@ -20,11 +20,11 @@ import java.util.Map;
  */
 @Service
 public class ReportService {
-    private List<ParkReport> reports;
-    private List<String> maintenanceAlerts;
-    private AttractionService attractionService;
-    private AuthService authService;
-    private QueueService queueService;
+    private final List<ParkReport> reports;
+    private final List<String> maintenanceAlerts;
+    private final AttractionService attractionService;
+    private final AuthService authService;
+    private final QueueService queueService;
 
     public ReportService(AttractionService attractionService, AuthService authService, QueueService queueService) {
         this.reports = new ArrayList<>();
@@ -35,32 +35,25 @@ public class ReportService {
     }
 
     public ParkReport generateDailyReport(LocalDate date) {
-        ParkReport report = new ParkReport(date);
-        calculateRevenue(report);
-        calculateVisitors(report);
-        report.setMostVisitedAttractions(getMostVisitedAttractions());
-        report.setAverageWaitTimes(getAverageWaitTimes());
-        report.setWeatherClosures(getWeatherClosures());
-        report.setMaintenanceAlerts(getMaintenanceAlerts());
-        report.setCapacityPercentage(calculateCapacityPercentage());
+        ParkReport report = buildReportSnapshot(date);
         reports.add(report);
         return report;
     }
 
+    public ParkReport getCurrentReportSnapshot(LocalDate date) {
+        return buildReportSnapshot(date);
+    }
+
     private void calculateRevenue(ParkReport report) {
-        double revenue = 0;
-        List<Visitor> visitors = authService.getAllVisitors();
-
-        for (Visitor visitor : visitors) {
-            revenue += 100 - visitor.getVirtualBalance();
-        }
-
-        report.setDailyRevenue(revenue);
+        report.setDailyRevenue(queueService.getIngresosTotales());
     }
 
     private void calculateVisitors(ParkReport report) {
-        List<Visitor> visitors = authService.getAllVisitors();
-        report.setTotalVisitors(visitors.size());
+        int totalVisitors = 0;
+        for (Attraction attraction : attractionService.getAllAttractions()) {
+            totalVisitors += Math.max(attraction.getVisitantesTotales(), 0);
+        }
+        report.setTotalVisitors(totalVisitors);
     }
 
     private Map<String, Integer> getMostVisitedAttractions() {
@@ -149,11 +142,7 @@ public class ReportService {
     }
 
     public double getCurrentRevenue() {
-        double revenue = 0;
-        for (Visitor visitor : authService.getAllVisitors()) {
-            revenue += 100 - visitor.getVirtualBalance();
-        }
-        return revenue;
+        return queueService.getIngresosTotales();
     }
 
     public Attraction getMostVisitedAttraction() {
@@ -167,5 +156,17 @@ public class ReportService {
         }
 
         return mostVisited;
+    }
+
+    private ParkReport buildReportSnapshot(LocalDate date) {
+        ParkReport report = new ParkReport(date);
+        calculateRevenue(report);
+        calculateVisitors(report);
+        report.setMostVisitedAttractions(getMostVisitedAttractions());
+        report.setAverageWaitTimes(getAverageWaitTimes());
+        report.setWeatherClosures(getWeatherClosures());
+        report.setMaintenanceAlerts(getMaintenanceAlerts());
+        report.setCapacityPercentage(calculateCapacityPercentage());
+        return report;
     }
 }

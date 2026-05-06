@@ -19,7 +19,9 @@ public class VisitorProfileDto {
     private TicketType ticketType;
     private List<Long> favoriteAttractions;
     private List<Long> visitHistory;
+    private List<String> historialAtracciones;
     private List<String> notifications;
     private int positionInQueue;
     private Long currentQueueAttractionId;
+    private Long currentLocationAttractionId;
 }

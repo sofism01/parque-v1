@@ -51,6 +51,7 @@ public class AttractionController {
 
     @GetMapping
     public ResponseEntity<List<Attraction>> getAllAttractions() {
+        parkDataBootstrapService.reloadDataFromDisk();
         List<Attraction> attractions = attractionService.getAllAttractions();
         return ResponseEntity.ok(attractions);
     }
@@ -81,6 +82,7 @@ public class AttractionController {
         try {
             Attraction updatedAttraction = attractionService.updateAttraction(id, attraction);
             parkDataBootstrapService.saveData();
+            parkDataBootstrapService.reloadDataFromDisk();
             graphService.recargarGrafo();
             return ResponseEntity.ok(updatedAttraction);
         } catch (IllegalArgumentException exception) {
@@ -93,6 +95,7 @@ public class AttractionController {
         try {
             attractionService.addAttraction(attraction);
             parkDataBootstrapService.saveData();
+            parkDataBootstrapService.reloadDataFromDisk();
             graphService.recargarGrafo();
             return ResponseEntity.ok(attraction);
         } catch (IllegalArgumentException exception) {
@@ -106,15 +109,33 @@ public class AttractionController {
             @RequestBody Map<String, String> statusRequest) {
         Attraction attraction = attractionService.getAttractionById(id);
         if (attraction != null) {
-            AttractionStatus status = AttractionStatus.valueOf(statusRequest.get("status").toUpperCase());
+            String statusValue = statusRequest.get("status");
+            AttractionStatus status = switch (statusValue.toUpperCase()) {
+                case "ABIERTA", "ACTIVA" -> AttractionStatus.ACTIVA;
+                case "CLIMA", "CERRADA" -> AttractionStatus.CERRADA;
+                case "MANTENIMIENTO" -> AttractionStatus.MANTENIMIENTO;
+                default -> AttractionStatus.valueOf(statusValue.toUpperCase());
+            };
             String reasonValue = statusRequest.get("reason");
             ClosureReason reason = reasonValue == null
                     ? ClosureReason.NINGUNO
                     : ClosureReason.valueOf(reasonValue.toUpperCase());
             attraction.setStatus(status);
+            if (statusRequest.get("estado") != null) {
+                attraction.setEstado(statusRequest.get("estado"));
+            }
             attraction.setClosureReason(reason);
+            if (AttractionStatus.MANTENIMIENTO.equals(status) || AttractionStatus.CERRADA.equals(status)) {
+                queueService.cancelQueueWithAlert(
+                        attraction.getId(),
+                        "La atraccion " + attraction.getName() + " ha cerrado por "
+                                + (AttractionStatus.MANTENIMIENTO.equals(status) ? "MANTENIMIENTO" : "CLIMA")
+                                + ". Has sido removido de la fila."
+                );
+            }
             attractionService.updateAttraction(attraction);
             parkDataBootstrapService.saveData();
+            parkDataBootstrapService.reloadDataFromDisk();
             return ResponseEntity.ok(Map.of("message", "Estado actualizado"));
         }
         return ResponseEntity.notFound().build();
@@ -208,6 +229,7 @@ public class AttractionController {
     public ResponseEntity<Map<String, String>> closeAttractionsByWeather(@RequestBody Map<String, String> weather) {
         attractionService.closeAttractionsByWeather(weather.get("alert"));
         parkDataBootstrapService.saveData();
+        parkDataBootstrapService.reloadDataFromDisk();
         return ResponseEntity.ok(Map.of("message", "Atracciones cerradas por clima"));
     }
 
@@ -221,6 +243,7 @@ public class AttractionController {
         attraction.resetMaintenance();
         attractionService.updateAttraction(attraction);
         parkDataBootstrapService.saveData();
+        parkDataBootstrapService.reloadDataFromDisk();
         return ResponseEntity.ok(Map.of("message", "Contador de mantenimiento reiniciado"));
     }
 
@@ -229,6 +252,7 @@ public class AttractionController {
         try {
             Attraction attraction = attractionService.reopenAttraction(id);
             parkDataBootstrapService.saveData();
+            parkDataBootstrapService.reloadDataFromDisk();
             graphService.recargarGrafo();
             return ResponseEntity.ok(attraction);
         } catch (IllegalArgumentException exception) {

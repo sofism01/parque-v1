@@ -1,17 +1,31 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 const DEV_TOKEN = 'dev-admin-token';
+const ADMIN_REFRESH_INTERVAL_MS = 5000;
 
 let attractions = [];
 let zones = [];
 let operators = [];
 let graphSnapshot = { nodes: [], edges: [], zones: [] };
 let editingAttractionId = null;
+let currentQueueInfoAttractionId = null;
+let adminRefreshHandle = null;
+let adminRefreshInFlight = false;
+let renderedGraphNodes = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     ensureDevSession();
     loadUsername();
     initNavigation();
+    initAdminMapInteractions();
     await initializeDashboard();
+    startAdminPolling();
+});
+
+window.addEventListener('beforeunload', () => {
+    if (adminRefreshHandle != null) {
+        window.clearInterval(adminRefreshHandle);
+        adminRefreshHandle = null;
+    }
 });
 
 function ensureDevSession() {
@@ -40,7 +54,7 @@ async function loadData() {
         }
 
         const data = await response.json();
-        attractions = Array.isArray(data.attractions) ? data.attractions : [];
+        attractions = Array.isArray(data.attractions) ? data.attractions.map(normalizeAdminAttraction) : [];
         zones = Array.isArray(data.zones) ? data.zones : [];
         operators = Array.isArray(data.operators) ? data.operators : [];
         renderAttractionsTable();
@@ -85,6 +99,7 @@ function initNavigation() {
 async function apiFetch(path, options = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
         mode: 'cors',
+        cache: 'no-store',
         ...options,
         headers: {
             ...getAuthHeaders(),
@@ -108,7 +123,7 @@ async function loadDashboard() {
         const report = await apiFetch('/reports/latest');
         setText('totalVisitors', report.totalVisitors ?? 0);
         setText('dailyRevenue', `$${Number(report.dailyRevenue || 0).toFixed(2)}`);
-        setText('activeAttractions', attractions.filter((attraction) => attraction.status === 'ACTIVA').length);
+        setText('activeAttractions', attractions.filter((attraction) => isAttractionOpen(attraction)).length);
 
         const maintenanceAlerts = Array.isArray(report.maintenanceAlerts) ? report.maintenanceAlerts.length : 0;
         const weatherClosures = Array.isArray(report.weatherClosures) ? report.weatherClosures.length : 0;
@@ -120,7 +135,7 @@ async function loadDashboard() {
 
 async function loadAttractions() {
     try {
-        attractions = await apiFetch('/attractions');
+        attractions = (await apiFetch('/admin/attractions')).map(normalizeAdminAttraction);
         renderAttractionsTable();
     } catch (error) {
         showAlert(`No fue posible cargar atracciones: ${error.message}`, 'danger');
@@ -150,11 +165,13 @@ function renderAttractionsTable() {
             <td>${attraction.name}</td>
             <td>${attraction.type}</td>
             <td>${attraction.accumulatedVisitors}${maintenanceAlert}</td>
-            <td><span class="badge ${getStatusBadge(attraction.status)}">${attraction.status}</span></td>
-            <td>${attraction.estimatedWaitTime || 0} min</td>
+            <td><span class="badge ${getStatusBadge(resolveAttractionState(attraction))}">${resolveAttractionState(attraction)}</span></td>
+            <td>${attraction.formattedWaitTime || '0 segundos'}</td>
+            <td>${Number(attraction.totalFila || 0)}</td>
             <td>
+                <button class="btn-secondary" onclick="showQueueInfo(${attraction.id})">Ver Info</button>
                 ${needsMaintenance ? `<button class="btn-primary" onclick="repairAttraction(${attraction.id})">Reparar</button>` : ''}
-                ${attraction.status === 'CERRADA' ? `<button class="btn-primary" onclick="reopenAttraction(${attraction.id})">Abrir Atraccion</button>` : ''}
+                ${!isAttractionOpen(attraction) ? `<button class="btn-primary" onclick="reopenAttraction(${attraction.id})">Abrir Atraccion</button>` : ''}
                 <button class="btn-secondary" onclick="prepararEdicion(${attraction.id})">Editar</button>
                 <button class="btn-danger" onclick="deleteAttraction(${attraction.id})">Eliminar</button>
             </td>
@@ -242,7 +259,7 @@ function renderOperatorsTable() {
 
 async function loadGraph() {
     try {
-        graphSnapshot = await apiFetch('/admin/graph');
+        graphSnapshot = normalizeGraphSnapshot(await apiFetch('/admin/graph'));
         drawParkMap();
     } catch (error) {
         showAlert(`No fue posible cargar el grafo: ${error.message}`, 'danger');
@@ -267,6 +284,7 @@ function drawParkMap() {
     const nodes = Array.isArray(graphSnapshot.nodes) ? graphSnapshot.nodes : [];
     const edges = Array.isArray(graphSnapshot.edges) ? graphSnapshot.edges : [];
     const positionedNodes = resolveGraphLayout(nodes, canvas);
+    renderedGraphNodes = positionedNodes;
     const nodeMap = new Map(positionedNodes.map((node) => [node.id, node]));
 
     ctx.strokeStyle = '#94a3b8';
@@ -292,7 +310,7 @@ function drawParkMap() {
 
     positionedNodes.forEach((node) => {
         ctx.beginPath();
-        ctx.fillStyle = resolveNodeColor(node.status);
+        ctx.fillStyle = resolveNodeColor(resolveAttractionState(node));
         ctx.arc(node.drawX, node.drawY, 18, 0, Math.PI * 2);
         ctx.fill();
 
@@ -330,13 +348,69 @@ function resolveGraphLayout(nodes, canvas) {
 }
 
 function resolveNodeColor(status) {
-    if (status === 'ACTIVA') {
-        return '#16a34a';
+    if (status === 'ABIERTA') {
+        return '#28a745';
     }
-    if (status === 'CERRADA') {
-        return '#dc2626';
+    if (status === 'MANTENIMIENTO') {
+        return '#f59e0b';
     }
-    return '#f59e0b';
+    return '#dc3545';
+}
+
+function initAdminMapInteractions() {
+    const canvas = document.getElementById('parkMap');
+    if (!canvas) {
+        return;
+    }
+
+    canvas.addEventListener('click', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const selectedNode = renderedGraphNodes.find((node) => {
+            const distance = Math.hypot(node.drawX - x, node.drawY - y);
+            return distance <= 18;
+        });
+
+        if (selectedNode) {
+            prepararEdicion(selectedNode.id);
+        }
+    });
+}
+
+function startAdminPolling() {
+    if (adminRefreshHandle != null) {
+        window.clearInterval(adminRefreshHandle);
+    }
+
+    adminRefreshHandle = window.setInterval(() => {
+        fetchAtraccionesAdmin(false);
+    }, ADMIN_REFRESH_INTERVAL_MS);
+}
+
+async function fetchAtraccionesAdmin(showErrors = true) {
+    if (adminRefreshInFlight) {
+        return;
+    }
+
+    adminRefreshInFlight = true;
+    try {
+        const latestAttractions = (await apiFetch('/admin/attractions')).map(normalizeAdminAttraction);
+        attractions = mergeAttractionsState(attractions, latestAttractions);
+        graphSnapshot = mergeGraphNodeStates(graphSnapshot, latestAttractions);
+        renderAttractionsTable();
+        syncQueueInfoModal();
+        setText('activeAttractions', attractions.filter((attraction) => isAttractionOpen(attraction)).length);
+        drawParkMap();
+        await loadDashboard();
+    } catch (error) {
+        if (showErrors) {
+            showAlert(`No fue posible actualizar atracciones en tiempo real: ${error.message}`, 'danger');
+        }
+    } finally {
+        adminRefreshInFlight = false;
+    }
 }
 
 async function generateDailyReport() {
@@ -468,6 +542,31 @@ function showAddOperatorForm() {
     openModal('operatorModal');
 }
 
+function showQueueInfo(attractionId) {
+    currentQueueInfoAttractionId = Number(attractionId);
+    syncQueueInfoModal();
+    openModal('queueInfoModal');
+}
+
+function syncQueueInfoModal() {
+    if (currentQueueInfoAttractionId == null) {
+        return;
+    }
+
+    const attraction = attractions.find((item) => Number(item.id) === Number(currentQueueInfoAttractionId));
+    if (!attraction) {
+        currentQueueInfoAttractionId = null;
+        return;
+    }
+
+    setText('queueInfoModalTitle', `Fila de ${attraction.name || 'Atraccion'}`);
+    setText('queueInfoSummary', `Personas en fila: ${Number(attraction.totalFila || 0)}`);
+    setText(
+        'queueInfoBreakdown',
+        `Fast Pass: ${Number(attraction.conteoFastPass || 0)} | Familiar: ${Number(attraction.conteoFamiliar || 0)} | General: ${Number(attraction.conteoGeneral || 0)}`
+    );
+}
+
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -479,6 +578,9 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'none';
+    }
+    if (modalId === 'queueInfoModal') {
+        currentQueueInfoAttractionId = null;
     }
 }
 
@@ -856,16 +958,92 @@ function showAlert(message, type = 'warning') {
 
 function getStatusBadge(status) {
     switch (status) {
-        case 'ACTIVA':
+        case 'ABIERTA':
             return 'badge-success';
         case 'MANTENIMIENTO':
             return 'badge-warning';
-        case 'CERRADA':
-        case 'TORMENTA':
+        case 'CLIMA':
             return 'badge-danger';
         default:
             return 'badge-info';
     }
+}
+
+function normalizeAdminAttraction(attraction) {
+    const estado = resolveAttractionState(attraction);
+    return {
+        ...attraction,
+        estado,
+        status: attraction?.status ?? (estado === 'ABIERTA' ? 'ACTIVA' : estado === 'CLIMA' ? 'CERRADA' : 'MANTENIMIENTO'),
+        formattedWaitTime: attraction?.formattedWaitTime ?? `${Number(attraction?.estimatedWaitTime ?? 0)} segundos`,
+        totalFila: Number(attraction?.totalFila ?? attraction?.peopleWaiting ?? 0),
+        conteoFastPass: Number(attraction?.conteoFastPass ?? 0),
+        conteoFamiliar: Number(attraction?.conteoFamiliar ?? 0),
+        conteoGeneral: Number(attraction?.conteoGeneral ?? 0)
+    };
+}
+
+function normalizeGraphSnapshot(snapshot) {
+    return {
+        ...snapshot,
+        nodes: (Array.isArray(snapshot?.nodes) ? snapshot.nodes : []).map((node) => {
+            const attraction = attractions.find((item) => Number(item.id) === Number(node.id));
+            const estado = resolveAttractionState(attraction || node);
+            return {
+                ...node,
+                estado,
+                status: estado
+            };
+        })
+    };
+}
+
+function mergeAttractionsState(currentAttractions, latestAttractions) {
+    const currentById = new Map((Array.isArray(currentAttractions) ? currentAttractions : []).map((item) => [Number(item.id), item]));
+    return latestAttractions.map((item) => ({
+        ...(currentById.get(Number(item.id)) || {}),
+        ...item
+    }));
+}
+
+function mergeGraphNodeStates(snapshot, latestAttractions) {
+    const attractionById = new Map(latestAttractions.map((item) => [Number(item.id), item]));
+    return {
+        ...snapshot,
+        nodes: (Array.isArray(snapshot?.nodes) ? snapshot.nodes : []).map((node) => {
+            const attraction = attractionById.get(Number(node.id));
+            if (!attraction) {
+                return node;
+            }
+
+            const estado = resolveAttractionState(attraction);
+            return {
+                ...node,
+                estado,
+                status: estado
+            };
+        })
+    };
+}
+
+function resolveAttractionState(entity) {
+    const rawState = entity?.estado ?? entity?.status ?? null;
+    if (!rawState) {
+        return 'CLIMA';
+    }
+
+    const normalized = String(rawState).trim().toUpperCase();
+    if (normalized === 'ACTIVA') {
+        return 'ABIERTA';
+    }
+    if (normalized === 'CERRADA' || normalized === 'TORMENTA') {
+        return 'CLIMA';
+    }
+    return normalized;
+}
+
+function isAttractionOpen(entity) {
+    return resolveAttractionState(entity) === 'ABIERTA';
 }
 
 function getAuthHeaders() {

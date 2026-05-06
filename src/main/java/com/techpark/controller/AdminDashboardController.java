@@ -35,7 +35,7 @@ public class AdminDashboardController {
     private TableColumn<Attraction, Number> visitorsColumn;
 
     @FXML
-    private TableColumn<Attraction, Number> waitTimeColumn;
+    private TableColumn<Attraction, String> waitTimeColumn;
 
     @FXML
     private Label totalRevenueLabel;
@@ -101,7 +101,7 @@ public class AdminDashboardController {
             visitorsColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().getAccumulatedVisitors()));
         }
         if (waitTimeColumn != null) {
-            waitTimeColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().getEstimatedWaitTime()));
+            waitTimeColumn.setCellValueFactory(cell -> new ReadOnlyStringWrapper(cell.getValue().getFormattedWaitTime()));
         }
         if (attractionsTable != null) {
             attractionsTable.setRowFactory(table -> new TableRow<>() {

@@ -46,10 +46,6 @@ public class ReportController {
 
     @GetMapping("/latest")
     public ResponseEntity<ParkReport> getLatestReport() {
-        ParkReport report = reportService.getLatestReport();
-        if (report != null) {
-            return ResponseEntity.ok(report);
-        }
-        return ResponseEntity.ok(reportService.generateDailyReport(LocalDate.now()));
+        return ResponseEntity.ok(reportService.getCurrentReportSnapshot(LocalDate.now()));
     }
 }

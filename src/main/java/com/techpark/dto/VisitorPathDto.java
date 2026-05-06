@@ -11,6 +11,8 @@ public class VisitorPathDto {
     private List<GraphNodeDto> path;
     private List<String> pathNames;
     private int totalDistance;
+    private Long originAttractionId;
+    private Long destinationAttractionId;
     private boolean reachable;
     private String message;
 }

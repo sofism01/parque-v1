@@ -53,6 +53,10 @@ public class AttractionService {
     @Lazy
     private ReportService reportService;
 
+    @Autowired
+    @Lazy
+    private ParkDataBootstrapService parkDataBootstrapService;
+
     public AttractionService() {
         this.attractionTree = new BinarySearchTree<>();
         this.attractionsById = new HashMap<>();
@@ -225,8 +229,9 @@ public class AttractionService {
         attraction.setMinAge(readInt(request, new String[]{"minAge", "edadMinima"}, existing.getMinAge()));
         attraction.setAdditionalCost(readDouble(request, new String[]{"additionalCost", "cost", "costo"}, existing.getAdditionalCost()));
         attraction.setAccumulatedVisitors(readInt(request, new String[]{"accumulatedVisitors", "visitantesAcumulados"}, existing.getAccumulatedVisitors()));
-        attraction.setEstimatedWaitTime(readInt(request, new String[]{"estimatedWaitTime", "tiempoEspera"}, existing.getEstimatedWaitTime()));
-        attraction.setStatus(readAttractionStatus(request, existing.getStatus()));
+        String estado = readNonBlankString(request, new String[]{"estado"}, existing.getEstado());
+        attraction.setEstado(estado);
+        attraction.setStatus(readAttractionStatus(request, attraction.getStatus()));
         attraction.setClosureReason(readClosureReason(request, existing.getClosureReason()));
         attraction.setClimateOverrideActive(readBoolean(request, new String[]{"climateOverrideActive"}, existing.isClimateOverrideActive()));
 
@@ -263,8 +268,8 @@ public class AttractionService {
         attraction.setMinAge(incomingAttraction.getMinAge());
         attraction.setAdditionalCost(incomingAttraction.getAdditionalCost());
         attraction.setAccumulatedVisitors(existing.getAccumulatedVisitors());
-        attraction.setEstimatedWaitTime(existing.getEstimatedWaitTime());
-        attraction.setStatus(incomingAttraction.getStatus() != null ? incomingAttraction.getStatus() : existing.getStatus());
+        attraction.setEstado(incomingAttraction.getEstado() != null ? incomingAttraction.getEstado() : existing.getEstado());
+        attraction.setStatus(incomingAttraction.getStatus() != null ? incomingAttraction.getStatus() : attraction.getStatus());
         attraction.setClosureReason(incomingAttraction.getClosureReason() != null ? incomingAttraction.getClosureReason() : existing.getClosureReason());
         attraction.setClimateOverrideActive(existing.isClimateOverrideActive());
 
@@ -424,7 +429,7 @@ public class AttractionService {
 
         for (Attraction attraction : attractionsById.values()) {
             if (attraction.needsMaintenance()) {
-                attraction.changeStatus(AttractionStatus.MANTENIMIENTO, ClosureReason.TECNICO);
+                closeAttractionAndEvictQueue(attraction, AttractionStatus.MANTENIMIENTO, ClosureReason.TECNICO);
                 needsMaintenance.add(attraction);
             }
         }
@@ -437,7 +442,6 @@ public class AttractionService {
             if (AttractionType.MECANICA_ALTURA.equals(attraction.getType())
                     || AttractionType.ACUATICA.equals(attraction.getType())) {
                 attraction.setClimateOverrideActive(false);
-                attraction.changeStatus(AttractionStatus.CERRADA, ClosureReason.CLIMA);
                 notifyAffectedVisitorsByWeather(attraction, weatherAlert);
             }
         }
@@ -466,28 +470,26 @@ public class AttractionService {
 
         attraction.addVisitor();
         visitor.addVisit(attractionId);
+        visitor.setCurrentLocationAttractionId(attractionId);
+        if (Objects.equals(visitor.getCurrentQueueAttractionId(), attractionId)) {
+            queueService.removeVisitorFromQueue(attractionId, visitorId);
+            visitor.setCurrentQueueAttractionId(null);
+            visitor.setPositionInQueue(-1);
+        }
 
         if (attraction.needsMaintenance()) {
-            attraction.changeStatus(AttractionStatus.MANTENIMIENTO, ClosureReason.TECNICO);
+            closeAttractionAndEvictQueue(attraction, AttractionStatus.MANTENIMIENTO, ClosureReason.TECNICO);
             reportService.addMaintenanceAlert("Alerta de Mantenimiento: " + attraction.getName()
                     + " requiere revision tecnica por alta demanda");
         }
 
+        parkDataBootstrapService.saveData();
         return new OperationResult(true, "Ingreso registrado correctamente");
     }
 
     public void updateEstimatedWaitTimes(int averageCycleTimeMinutes) {
         for (Attraction attraction : attractionsById.values()) {
-            int queueSize = queueService.getQueueSize(attraction.getId());
-            int capacityPerCycle = attraction.getMaxCapacityPerCycle();
-
-            if (capacityPerCycle <= 0 || averageCycleTimeMinutes <= 0) {
-                attraction.setEstimatedWaitTime(0);
-                continue;
-            }
-
-            int cycles = (int) Math.ceil((double) queueSize / capacityPerCycle);
-            attraction.setEstimatedWaitTime(cycles * averageCycleTimeMinutes);
+            attraction.setEstimatedWaitTime(0);
         }
     }
 
@@ -558,7 +560,11 @@ public class AttractionService {
     }
 
     private void notifyAffectedVisitorsByWeather(Attraction attraction, String weatherAlert) {
-        List<QueueEntry> cancelledEntries = queueService.cancelQueue(attraction.getId());
+        List<QueueEntry> cancelledEntries = closeAttractionAndEvictQueue(
+                attraction,
+                AttractionStatus.CERRADA,
+                ClosureReason.CLIMA
+        );
 
         for (QueueEntry entry : cancelledEntries) {
             Visitor visitor = authService.getVisitor(entry.getVisitorId());
@@ -567,6 +573,28 @@ public class AttractionService {
                         + ". Motivo: " + weatherAlert);
             }
         }
+    }
+
+    private List<QueueEntry> closeAttractionAndEvictQueue(Attraction attraction,
+                                                          AttractionStatus status,
+                                                          ClosureReason reason) {
+        if (attraction == null) {
+            return new ArrayList<>();
+        }
+
+        attraction.changeStatus(status, reason);
+        return queueService.cancelQueueWithAlert(
+                attraction.getId(),
+                "La atraccion " + attraction.getName() + " ha cerrado por "
+                        + resolveClosureLabel(reason) + ". Has sido removido de la fila."
+        );
+    }
+
+    private String resolveClosureLabel(ClosureReason reason) {
+        if (ClosureReason.CLIMA.equals(reason)) {
+            return "CLIMA";
+        }
+        return "MANTENIMIENTO";
     }
 
     private void deleteAttractionInternal(Attraction attraction) {
@@ -1119,7 +1147,15 @@ public class AttractionService {
 
     private AttractionStatus readAttractionStatus(Map<String, Object> request, AttractionStatus fallback) {
         String value = readNonBlankString(request, new String[]{"status", "estado"}, null);
-        return value != null ? AttractionStatus.valueOf(value.toUpperCase()) : fallback;
+        if (value == null) {
+            return fallback;
+        }
+        return switch (value.toUpperCase()) {
+            case "ABIERTA", "ACTIVA" -> AttractionStatus.ACTIVA;
+            case "CLIMA", "CERRADA" -> AttractionStatus.CERRADA;
+            case "MANTENIMIENTO" -> AttractionStatus.MANTENIMIENTO;
+            default -> AttractionStatus.valueOf(value.toUpperCase());
+        };
     }
 
     private ClosureReason readClosureReason(Map<String, Object> request, ClosureReason fallback) {

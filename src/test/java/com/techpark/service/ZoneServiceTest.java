@@ -20,9 +20,9 @@ class ZoneServiceTest {
 
     @Test
     void deleteZone_removesAttractionsQueuesEdgesAndPersistsImmediately() {
-        QueueService queueService = new QueueService();
         AuthService authService = new AuthService();
         AttractionService attractionService = new AttractionService();
+        QueueService queueService = new QueueService(attractionService, authService);
         GraphService graphService = new GraphService();
         ReflectionTestUtils.setField(attractionService, "queueService", queueService);
         ReflectionTestUtils.setField(attractionService, "authService", authService);

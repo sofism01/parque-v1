@@ -26,7 +26,7 @@ public class DataImportController {
     }
 
     public void importDataResource(String resourcePath) {
-        parkDataBootstrapService.importDataResource(resourcePath);
+        parkDataBootstrapService.importDataFile();
     }
 
     public void importDataAsync(File file, Runnable onSuccess, java.util.function.Consumer<Throwable> onError) {

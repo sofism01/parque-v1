@@ -4,6 +4,7 @@ import com.techpark.datastructures.CustomSet;
 import com.techpark.datastructures.LinkedList;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = false)
 public class Visitor extends User {
     private String document;
     private int age;
@@ -24,19 +26,25 @@ public class Visitor extends User {
     private TicketType ticketType;
     private CustomSet<Long> favoriteAttractions;
     private LinkedList<Long> visitHistory;
+    private List<String> historialAtracciones;
     private List<String> notifications;
+    private String mensajeAlerta;
     private int positionInQueue;
     private Long currentQueueAttractionId;
+    private Long currentLocationAttractionId;
 
     public Visitor(String username, String password, String email) {
         super(null, username, password, email, "VISITOR", true, null);
         this.favoriteAttractions = new CustomSet<>();
         this.visitHistory = new LinkedList<>();
+        this.historialAtracciones = new ArrayList<>();
         this.notifications = new ArrayList<>();
+        this.mensajeAlerta = null;
         this.virtualBalance = 0.0;
         this.ticketType = TicketType.GENERAL;
         this.positionInQueue = -1;
         this.currentQueueAttractionId = null;
+        this.currentLocationAttractionId = null;
     }
 
     public void addFavorite(Long attractionId) {
@@ -49,6 +57,16 @@ public class Visitor extends User {
 
     public void addVisit(Long attractionId) {
         visitHistory.add(attractionId);
+    }
+
+    public void addHistorialAtraccion(String nombreAtraccion) {
+        if (nombreAtraccion == null || nombreAtraccion.isBlank()) {
+            return;
+        }
+        if (historialAtracciones == null) {
+            historialAtracciones = new ArrayList<>();
+        }
+        historialAtracciones.add(nombreAtraccion);
     }
 
     public void addNotification(String message) {

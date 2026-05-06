@@ -36,7 +36,8 @@ import java.util.Set;
 @Service
 public class ParkDataBootstrapService {
     private static final Path DATA_FILE_PATH = Path.of("data.json");
-    private static final String DEFAULT_DATA_JSON = "{\"attractions\":[], \"zones\":[], \"operators\":[], \"connections\":[]}";
+    private static final Path USERS_FILE_PATH = Path.of("usuarios.json");
+    private static final String DEFAULT_DATA_JSON = "{\"attractions\":[], \"zones\":[], \"operators\":[], \"connections\":[], \"ingresosTotales\":0}";
     private final AttractionService attractionService;
     private final GraphService graphService;
     private final AuthService authService;
@@ -62,10 +63,21 @@ public class ParkDataBootstrapService {
 
     public void importDataFile() {
         try {
+            ensureVisitorsSeedFile();
+            String content = readOrInitializeDataFile();
+            importContent(DATA_FILE_PATH.getFileName().toString(), content);
+            saveData();
+        } catch (IOException exception) {
+            throw new IllegalStateException("No fue posible cargar los datos iniciales", exception);
+        }
+    }
+
+    public void reloadDataFromDisk() {
+        try {
             String content = readOrInitializeDataFile();
             importContent(DATA_FILE_PATH.getFileName().toString(), content);
         } catch (IOException exception) {
-            throw new IllegalStateException("No fue posible cargar los datos iniciales", exception);
+            throw new IllegalStateException("No fue posible recargar data.json", exception);
         }
     }
 
@@ -74,6 +86,8 @@ public class ParkDataBootstrapService {
                 ? parseJson(content)
                 : parseText(content);
         data = normalizeData(data);
+        data.visitors = loadVisitorsFromUsersFile();
+        data.queues = ensureSeededQueues(data.queues, data.attractions);
 
         attractionService.resetParkData();
 
@@ -95,12 +109,20 @@ public class ParkDataBootstrapService {
             attraction.setName(attractionData.name);
             attraction.setType(AttractionType.valueOf(attractionData.type.toUpperCase()));
             attraction.setMaxCapacityPerCycle(attractionData.maxCapacityPerCycle);
-            attraction.setMinHeight(attractionData.minHeight);
-            attraction.setMinAge(attractionData.minAge);
+            attraction.setMinHeight(attractionData.estaturaMinima != null ? attractionData.estaturaMinima : attractionData.minHeight);
+            attraction.setMinAge(attractionData.edadMinima != null ? attractionData.edadMinima : attractionData.minAge);
             attraction.setAdditionalCost(attractionData.additionalCost);
-            attraction.setAccumulatedVisitors(attractionData.accumulatedVisitors);
+            attraction.setVisitantesTotales(
+                    attractionData.visitantesTotales != null
+                            ? attractionData.visitantesTotales
+                            : attractionData.accumulatedVisitors
+            );
             attraction.setEstimatedWaitTime(attractionData.estimatedWaitTime);
-            attraction.setStatus(AttractionStatus.valueOf(attractionData.status.toUpperCase()));
+            if (attractionData.estado != null && !attractionData.estado.isBlank()) {
+                attraction.setEstado(attractionData.estado);
+            } else {
+                attraction.setStatus(AttractionStatus.valueOf(attractionData.status.toUpperCase()));
+            }
             attraction.setClosureReason(attractionData.closureReason == null
                     ? ClosureReason.NINGUNO
                     : ClosureReason.valueOf(attractionData.closureReason.toUpperCase()));
@@ -172,13 +194,19 @@ public class ParkDataBootstrapService {
                 }
             }
             visitor.setVisitHistory(visitHistory);
+            visitor.setHistorialAtracciones(visitorData.historialAtracciones != null
+                    ? new ArrayList<>(visitorData.historialAtracciones)
+                    : new ArrayList<>());
             visitor.setNotifications(visitorData.notifications != null ? new ArrayList<>(visitorData.notifications) : new ArrayList<>());
+            visitor.setMensajeAlerta(visitorData.mensajeAlerta);
             visitor.setPositionInQueue(visitorData.positionInQueue);
             visitor.setCurrentQueueAttractionId(visitorData.currentQueueAttractionId);
+            visitor.setCurrentLocationAttractionId(visitorData.currentLocationAttractionId);
             visitors.add(visitor);
         }
 
         authService.replaceVisitors(visitors);
+        queueService.setIngresosTotales(data.ingresosTotales != null ? data.ingresosTotales : 0.0);
 
         for (Operator operator : operators) {
             if (operator.getZoneId() == null) {
@@ -207,6 +235,7 @@ public class ParkDataBootstrapService {
             Path outputPath = DATA_FILE_PATH;
             JsonObject root = buildPersistedJson(data, readExistingDataJson(outputPath));
             Files.writeString(outputPath, gson.toJson(root), StandardCharsets.UTF_8);
+            saveUsersFile(data.visitors);
         } catch (IOException exception) {
             throw new IllegalStateException("No fue posible guardar data.json", exception);
         }
@@ -284,6 +313,8 @@ public class ParkDataBootstrapService {
         attraction.maxCapacityPerCycle = Integer.parseInt(parts[4].trim());
         attraction.minHeight = Double.parseDouble(parts[5].trim());
         attraction.minAge = Integer.parseInt(parts[6].trim());
+        attraction.estaturaMinima = attraction.minHeight;
+        attraction.edadMinima = attraction.minAge;
         attraction.additionalCost = Double.parseDouble(parts[7].trim());
         attraction.zoneId = Long.parseLong(parts[8].trim());
         attraction.status = parts[9].trim();
@@ -314,6 +345,7 @@ public class ParkDataBootstrapService {
         private List<OperatorData> operators = new ArrayList<>();
         private List<VisitorData> visitors = new ArrayList<>();
         private List<QueueData> queues = new ArrayList<>();
+        private Double ingresosTotales;
     }
 
     private static class ZoneData {
@@ -337,12 +369,16 @@ public class ParkDataBootstrapService {
         private int maxCapacityPerCycle;
         private double minHeight;
         private int minAge;
+        private Double estaturaMinima;
+        private Integer edadMinima;
         private double additionalCost;
         private Long zoneId;
         private String status;
+        private String estado;
         private String closureReason;
         private Boolean climateOverrideActive;
         private int accumulatedVisitors;
+        private Integer visitantesTotales;
         private int estimatedWaitTime;
         private Double posX;
         private Double posY;
@@ -382,6 +418,7 @@ public class ParkDataBootstrapService {
 
     private static class VisitorData {
         private Long id;
+        private String name;
         private String username;
         private String password;
         private String email;
@@ -394,9 +431,12 @@ public class ParkDataBootstrapService {
         private String ticketType;
         private List<Long> favoriteAttractions;
         private List<Long> visitHistory;
+        private List<String> historialAtracciones;
         private List<String> notifications;
+        private String mensajeAlerta;
         private int positionInQueue;
         private Long currentQueueAttractionId;
+        private Long currentLocationAttractionId;
 
         private Long getIdSafe() {
             return id != null ? id : Long.MAX_VALUE;
@@ -451,12 +491,16 @@ public class ParkDataBootstrapService {
             attractionData.maxCapacityPerCycle = attraction.getMaxCapacityPerCycle();
             attractionData.minHeight = attraction.getMinHeight();
             attractionData.minAge = attraction.getMinAge();
+            attractionData.estaturaMinima = attraction.getMinHeight();
+            attractionData.edadMinima = attraction.getMinAge();
             attractionData.additionalCost = attraction.getAdditionalCost();
             attractionData.zoneId = attraction.getZoneId();
             attractionData.status = attraction.getStatus() != null ? attraction.getStatus().name() : null;
+            attractionData.estado = attraction.getEstado();
             attractionData.closureReason = attraction.getClosureReason() != null ? attraction.getClosureReason().name() : null;
             attractionData.climateOverrideActive = attraction.isClimateOverrideActive();
             attractionData.accumulatedVisitors = attraction.getAccumulatedVisitors();
+            attractionData.visitantesTotales = attraction.getVisitantesTotales();
             attractionData.estimatedWaitTime = attraction.getEstimatedWaitTime();
             attractionData.posX = attraction.getPosX();
             attractionData.posY = attraction.getPosY();
@@ -523,6 +567,7 @@ public class ParkDataBootstrapService {
         for (Visitor visitor : authService.getAllVisitors()) {
             VisitorData visitorData = new VisitorData();
             visitorData.id = visitor.getId();
+            visitorData.name = visitor.getUsername();
             visitorData.username = visitor.getUsername();
             visitorData.password = visitor.getPassword();
             visitorData.email = visitor.getEmail();
@@ -539,11 +584,16 @@ public class ParkDataBootstrapService {
             visitorData.visitHistory = visitor.getVisitHistory() != null
                     ? visitor.getVisitHistory().toList()
                     : new ArrayList<>();
+            visitorData.historialAtracciones = visitor.getHistorialAtracciones() != null
+                    ? new ArrayList<>(visitor.getHistorialAtracciones())
+                    : new ArrayList<>();
             visitorData.notifications = visitor.getNotifications() != null
                     ? new ArrayList<>(visitor.getNotifications())
                     : new ArrayList<>();
+            visitorData.mensajeAlerta = visitor.getMensajeAlerta();
             visitorData.positionInQueue = visitor.getPositionInQueue();
             visitorData.currentQueueAttractionId = visitor.getCurrentQueueAttractionId();
+            visitorData.currentLocationAttractionId = visitor.getCurrentLocationAttractionId();
             visitors.add(visitorData);
         }
         visitors.sort(Comparator.comparing(VisitorData::getIdSafe));
@@ -853,6 +903,208 @@ public class ParkDataBootstrapService {
         }
     }
 
+    private void ensureVisitorsSeedFile() throws IOException {
+        List<VisitorData> persistedVisitors = readUsersFile();
+        if (persistedVisitors.size() == 100) {
+            return;
+        }
+
+        List<VisitorData> generatedVisitors = generateDefaultVisitors();
+        saveUsersFile(generatedVisitors);
+    }
+
+    private List<VisitorData> loadVisitorsFromUsersFile() throws IOException {
+        List<VisitorData> visitors = readUsersFile();
+        if (visitors.size() == 100) {
+            return visitors;
+        }
+
+        List<VisitorData> generatedVisitors = generateDefaultVisitors();
+        saveUsersFile(generatedVisitors);
+        return generatedVisitors;
+    }
+
+    private List<VisitorData> readUsersFile() throws IOException {
+        if (!Files.exists(USERS_FILE_PATH) || Files.size(USERS_FILE_PATH) == 0) {
+            return new ArrayList<>();
+        }
+
+        String content = Files.readString(USERS_FILE_PATH, StandardCharsets.UTF_8);
+        if (content == null || content.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        UsuariosFileRecord[] users = gson.fromJson(content, UsuariosFileRecord[].class);
+        List<VisitorData> visitors = new ArrayList<>();
+        if (users == null) {
+            return visitors;
+        }
+
+        for (UsuariosFileRecord user : users) {
+            if (user == null) {
+                continue;
+            }
+            VisitorData visitorData = new VisitorData();
+            visitorData.id = user.id;
+            visitorData.name = user.nombre;
+            visitorData.username = user.username != null ? user.username : user.nombre;
+            visitorData.password = user.password != null ? user.password : "user123";
+            visitorData.email = user.email;
+            visitorData.active = user.active == null || user.active;
+            visitorData.document = user.documento;
+            visitorData.age = user.edad;
+            visitorData.height = user.estatura;
+            visitorData.virtualBalance = user.saldo;
+            visitorData.ticketType = user.tipo;
+            visitorData.favoriteAttractions = user.favoritos != null ? new ArrayList<>(user.favoritos) : new ArrayList<>();
+            visitorData.visitHistory = user.historial != null ? new ArrayList<>(user.historial) : new ArrayList<>();
+            visitorData.historialAtracciones = user.historialAtracciones != null
+                    ? new ArrayList<>(user.historialAtracciones)
+                    : new ArrayList<>();
+            visitorData.notifications = user.notificaciones != null ? new ArrayList<>(user.notificaciones) : new ArrayList<>();
+            visitorData.mensajeAlerta = user.mensajeAlerta;
+            visitorData.positionInQueue = user.posicionEnFila;
+            visitorData.currentQueueAttractionId = user.atraccionFilaActual;
+            visitorData.currentLocationAttractionId = user.ubicacionActual != null ? user.ubicacionActual : 1L;
+            visitors.add(visitorData);
+        }
+        visitors.sort(Comparator.comparing(VisitorData::getIdSafe));
+        return visitors;
+    }
+
+    private void saveUsersFile(List<VisitorData> visitors) throws IOException {
+        List<UsuariosFileRecord> users = new ArrayList<>();
+        for (VisitorData visitor : visitors) {
+            if (visitor == null) {
+                continue;
+            }
+            UsuariosFileRecord record = new UsuariosFileRecord();
+            record.id = visitor.id;
+            record.nombre = visitor.name != null ? visitor.name : visitor.username;
+            record.username = visitor.username;
+            record.password = visitor.password;
+            record.email = visitor.email;
+            record.active = visitor.active;
+            record.documento = visitor.document;
+            record.edad = visitor.age;
+            record.estatura = visitor.height;
+            record.saldo = visitor.virtualBalance;
+            record.tipo = visitor.ticketType;
+            record.ubicacionActual = visitor.currentLocationAttractionId;
+            record.favoritos = visitor.favoriteAttractions != null ? new ArrayList<>(visitor.favoriteAttractions) : new ArrayList<>();
+            record.historial = visitor.visitHistory != null ? new ArrayList<>(visitor.visitHistory) : new ArrayList<>();
+            record.historialAtracciones = visitor.historialAtracciones != null
+                    ? new ArrayList<>(visitor.historialAtracciones)
+                    : new ArrayList<>();
+            record.notificaciones = visitor.notifications != null ? new ArrayList<>(visitor.notifications) : new ArrayList<>();
+            record.mensajeAlerta = visitor.mensajeAlerta;
+            record.posicionEnFila = visitor.positionInQueue;
+            record.atraccionFilaActual = visitor.currentQueueAttractionId;
+            users.add(record);
+        }
+
+        users.sort(Comparator.comparing(user -> user.id != null ? user.id : Long.MAX_VALUE));
+        Files.writeString(USERS_FILE_PATH, gson.toJson(users), StandardCharsets.UTF_8);
+    }
+
+    private List<VisitorData> generateDefaultVisitors() {
+        List<VisitorData> visitors = new ArrayList<>();
+        for (int index = 1; index <= 100; index++) {
+            VisitorData visitor = new VisitorData();
+            visitor.id = 100L + index;
+            visitor.name = "Visitante " + index;
+            visitor.username = "visitante" + String.format("%03d", index);
+            visitor.password = "user123";
+            visitor.email = visitor.username + "@techpark.local";
+            visitor.active = true;
+            visitor.document = "DOC" + String.format("%06d", index);
+            visitor.age = 5 + ((index - 1) % 66);
+            visitor.height = Math.min(2.10, 1.00 + (((index - 1) * 11) % 111) / 100.0);
+            visitor.virtualBalance = 100.0;
+            visitor.ticketType = resolveGeneratedTicketType(index).name();
+            visitor.favoriteAttractions = new ArrayList<>();
+            visitor.visitHistory = new ArrayList<>();
+            visitor.historialAtracciones = new ArrayList<>();
+            visitor.notifications = new ArrayList<>();
+            visitor.mensajeAlerta = null;
+            visitor.positionInQueue = -1;
+            visitor.currentQueueAttractionId = null;
+            visitor.currentLocationAttractionId = 1L;
+            visitors.add(visitor);
+        }
+        return visitors;
+    }
+
+    private TicketType resolveGeneratedTicketType(int index) {
+        if (index <= 10) {
+            return TicketType.FAST_PASS;
+        }
+        if (index <= 90) {
+            return TicketType.GENERAL;
+        }
+        return TicketType.FAMILIAR;
+    }
+
+    private List<QueueData> ensureSeededQueues(List<QueueData> existingQueues, List<AttractionData> attractionData) {
+        List<QueueData> queues = deduplicateQueues(existingQueues);
+        if (!queues.isEmpty()) {
+            return queues;
+        }
+
+        List<AttractionData> attractions = attractionData != null ? new ArrayList<>(attractionData) : new ArrayList<>();
+        if (attractions.size() < 3) {
+            return queues;
+        }
+
+        attractions.sort(Comparator.comparing(AttractionData::getIdSafe));
+        queues.add(buildSeedQueue(attractions.get(0).id, 0, 0));
+        queues.add(buildSeedQueue(attractions.get(1).id, 200, 1_000L));
+        queues.add(buildSeedQueue(attractions.get(2).id, 499, 2_000L));
+        queues.sort(Comparator.comparing(QueueData::getAttractionIdSafe));
+        return queues;
+    }
+
+    private QueueData buildSeedQueue(Long attractionId, int size, long baseVisitorId) {
+        QueueData queueData = new QueueData();
+        queueData.attractionId = attractionId;
+        queueData.entries = new ArrayList<>();
+
+        for (int index = 1; index <= size; index++) {
+            QueueEntryData entry = new QueueEntryData();
+            entry.visitorId = baseVisitorId + index;
+            entry.visitorName = "Simulado " + index;
+            entry.ticketType = index % 10 == 0 ? TicketType.FAST_PASS.name() : TicketType.GENERAL.name();
+            entry.priority = TicketType.FAST_PASS.name().equals(entry.ticketType) ? 1 : 2;
+            entry.positionInQueue = index;
+            entry.timestamp = index;
+            queueData.entries.add(entry);
+        }
+
+        return queueData;
+    }
+
+    private static class UsuariosFileRecord {
+        private Long id;
+        private String nombre;
+        private String username;
+        private String password;
+        private String email;
+        private Boolean active;
+        private String documento;
+        private int edad;
+        private double estatura;
+        private double saldo;
+        private String tipo;
+        private Long ubicacionActual;
+        private List<Long> favoritos;
+        private List<Long> historial;
+        private List<String> historialAtracciones;
+        private List<String> notificaciones;
+        private String mensajeAlerta;
+        private int posicionEnFila;
+        private Long atraccionFilaActual;
+    }
+
     private JsonObject readExistingDataJson(Path outputPath) throws IOException {
         if (!Files.exists(outputPath)) {
             return JsonParser.parseString(readOrInitializeDataFile()).getAsJsonObject();
@@ -899,6 +1151,7 @@ public class ParkDataBootstrapService {
         root.add("attractions", gson.toJsonTree(data.attractions));
         root.add("connections", gson.toJsonTree(data.connections));
         root.add("operators", gson.toJsonTree(data.operators));
+        root.addProperty("ingresosTotales", queueService.getIngresosTotales());
 
         boolean shouldPersistVisitors = (existingRoot != null && existingRoot.has("visitors")) || !data.visitors.isEmpty();
         boolean shouldPersistQueues = (existingRoot != null && existingRoot.has("queues")) || !data.queues.isEmpty();

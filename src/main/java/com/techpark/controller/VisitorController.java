@@ -1,6 +1,8 @@
 package com.techpark.controller;
 
+import com.techpark.model.Attraction;
 import com.techpark.model.Visitor;
+import com.techpark.service.AttractionService;
 import com.techpark.service.AuthService;
 import com.techpark.service.ParkDataBootstrapService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,9 @@ public class VisitorController {
     private AuthService authService;
 
     @Autowired
+    private AttractionService attractionService;
+
+    @Autowired
     private ParkDataBootstrapService parkDataBootstrapService;
 
     @GetMapping("/{id}")
@@ -39,6 +44,12 @@ public class VisitorController {
     @GetMapping
     public ResponseEntity<List<Visitor>> getAllVisitors() {
         return ResponseEntity.ok(authService.getAllVisitors());
+    }
+
+    @GetMapping("/attractions")
+    public ResponseEntity<List<Attraction>> getAllAttractions() {
+        parkDataBootstrapService.reloadDataFromDisk();
+        return ResponseEntity.ok(attractionService.getAllAttractions());
     }
 
     @PostMapping("/register")

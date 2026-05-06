@@ -3,6 +3,7 @@ package com.techpark.controller;
 import com.techpark.dto.GraphNodeDto;
 import com.techpark.dto.GraphSnapshotDto;
 import com.techpark.dto.AdminZoneDto;
+import com.techpark.dto.VisitorAttractionDto;
 import com.techpark.dto.VisitorPathDto;
 import com.techpark.dto.VisitorProfileDto;
 import com.techpark.dto.VisitorQueueStatusDto;
@@ -66,8 +67,44 @@ public class VisitorApiController {
         return ResponseEntity.ok(toProfileDto(visitor));
     }
 
+    @GetMapping("/alert")
+    public ResponseEntity<?> getAlert(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestParam(value = "id", required = false) Long visitorId) {
+        if (visitorId == null && (token == null || token.isBlank())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Debes enviar el id del visitante"));
+        }
+
+        Visitor visitor = resolveVisitor(token, visitorId);
+        if (visitor == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "Visitante no encontrado"));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "message", visitor.getMensajeAlerta() != null ? visitor.getMensajeAlerta() : ""
+        ));
+    }
+
+    @PostMapping("/alert/clear")
+    public ResponseEntity<?> clearAlert(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestBody(required = false) Map<String, Object> request) {
+        Long visitorId = request != null && request.get("visitorId") instanceof Number number
+                ? number.longValue()
+                : null;
+        Visitor visitor = resolveVisitor(token, visitorId);
+        if (visitor == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "Visitante no encontrado"));
+        }
+
+        visitor.setMensajeAlerta(null);
+        parkDataBootstrapService.saveData();
+        return ResponseEntity.ok(Map.of("message", "Alerta limpiada"));
+    }
+
     @GetMapping("/graph")
     public ResponseEntity<?> getGraphSnapshot() {
+        parkDataBootstrapService.reloadDataFromDisk();
         GraphSnapshotDto snapshot = graphService.getGraphSnapshot();
         if (snapshot == null || snapshot.getNodes() == null || snapshot.getEdges() == null || snapshot.getZones() == null) {
             return ResponseEntity.status(500).body(Map.of("message", "El grafo del parque no esta disponible"));
@@ -77,15 +114,25 @@ public class VisitorApiController {
 
     @GetMapping("/attractions")
     public ResponseEntity<?> getAttractions() {
+        parkDataBootstrapService.reloadDataFromDisk();
         List<Attraction> attractions = attractionService.getAllAttractions();
         if (attractions == null) {
             return ResponseEntity.status(500).body(Map.of("message", "No fue posible obtener las atracciones"));
         }
-        return ResponseEntity.ok(attractions);
+
+        List<VisitorAttractionDto> attractionDtos = new ArrayList<>();
+        for (Attraction attraction : attractions) {
+            attractionDtos.add(VisitorAttractionDto.from(
+                    attraction,
+                    queueService.getQueueSize(attraction.getId())
+            ));
+        }
+        return ResponseEntity.ok(attractionDtos);
     }
 
     @GetMapping("/zones")
     public ResponseEntity<?> getZones() {
+        parkDataBootstrapService.reloadDataFromDisk();
         List<AdminZoneDto> zones = new ArrayList<>();
         attractionService.getAllZones().forEach((zone) -> zones.add(new AdminZoneDto(
                 zone.getId(),
@@ -102,10 +149,20 @@ public class VisitorApiController {
 
     @GetMapping("/path")
     public ResponseEntity<?> getShortestPath(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestParam(value = "id", required = false) Long visitorId,
             @RequestParam(value = "origin", required = false) Long originAttractionId,
             @RequestParam(value = "destination", required = false) Long destinationAttractionId) {
-        if (originAttractionId == null || destinationAttractionId == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Debes enviar origin y destination"));
+        Visitor visitor = resolveVisitor(token, visitorId);
+        if (destinationAttractionId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Debes enviar destination"));
+        }
+
+        if (originAttractionId == null) {
+            if (visitor == null || visitor.getCurrentLocationAttractionId() == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "El visitante no tiene ubicacionActual registrada"));
+            }
+            originAttractionId = visitor.getCurrentLocationAttractionId();
         }
 
         Attraction start = attractionService.getAttractionById(originAttractionId);
@@ -126,7 +183,8 @@ public class VisitorApiController {
                     attraction.getId(),
                     attraction.getName(),
                     attraction.getType() != null ? attraction.getType().name() : null,
-                    attraction.getStatus() != null ? attraction.getStatus().name() : null,
+                    attraction.getEstado(),
+                    attraction.getEstado(),
                     attraction.getZone() != null ? attraction.getZone().getId() : attraction.getZoneId(),
                     attraction.getZone() != null ? attraction.getZone().getName() : null,
                     attraction.getPosX(),
@@ -139,6 +197,8 @@ public class VisitorApiController {
                 pathNodes,
                 pathNames,
                 calculateDistance(path),
+                originAttractionId,
+                destinationAttractionId,
                 true,
                 "Ruta calculada correctamente"
         ));
@@ -157,6 +217,10 @@ public class VisitorApiController {
             return ResponseEntity.status(404).body(Map.of("message", "Visitante o atraccion no encontrados"));
         }
 
+        if (!attraction.isAvailable()) {
+            return ResponseEntity.badRequest().body(Map.of("message", resolveClosedAttractionMessage(attraction)));
+        }
+
         OperationResult accessResult = visitor.canAccessAttraction(attraction);
         if (!accessResult.isSuccess()) {
             return ResponseEntity.badRequest().body(Map.of("message", accessResult.getMessage()));
@@ -172,23 +236,18 @@ public class VisitorApiController {
             }
         }
 
-        OperationResult paymentResult = visitor.payForAttraction(attraction);
-        if (!paymentResult.isSuccess()) {
-            return ResponseEntity.badRequest().body(Map.of("message", paymentResult.getMessage()));
+        int position;
+        try {
+            position = queueService.addVisitorToQueue(attractionId, visitor);
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
         }
-
-        int position = queueService.addVisitorToQueue(
-                attractionId,
-                visitor.getId(),
-                visitor.getUsername(),
-                visitor.getTicketType()
-        );
 
         visitor.setPositionInQueue(position);
         visitor.setCurrentQueueAttractionId(attractionId);
         parkDataBootstrapService.saveData();
 
-        return ResponseEntity.ok(buildQueueStatus(visitor, attraction, paymentResult.getMessage()));
+        return ResponseEntity.ok(buildQueueStatus(visitor, attraction, "Acceso a fila registrado correctamente"));
     }
 
     @GetMapping("/queue/status")
@@ -206,6 +265,8 @@ public class VisitorApiController {
 
         if (visitor.getCurrentQueueAttractionId() == null) {
             return ResponseEntity.ok(new VisitorQueueStatusDto(
+                    null,
+                    null,
                     null,
                     null,
                     null,
@@ -231,6 +292,8 @@ public class VisitorApiController {
             visitor.setPositionInQueue(-1);
             parkDataBootstrapService.saveData();
             return ResponseEntity.ok(new VisitorQueueStatusDto(
+                    null,
+                    null,
                     null,
                     null,
                     null,
@@ -295,9 +358,11 @@ public class VisitorApiController {
                 visitor.getTicketType(),
                 visitor.getFavoriteAttractions() != null ? visitor.getFavoriteAttractions().toList() : new ArrayList<>(),
                 visitor.getVisitHistory() != null ? visitor.getVisitHistory().toList() : new ArrayList<>(),
+                visitor.getHistorialAtracciones() != null ? new ArrayList<>(visitor.getHistorialAtracciones()) : new ArrayList<>(),
                 visitor.getNotifications() != null ? visitor.getNotifications() : new ArrayList<>(),
                 visitor.getPositionInQueue(),
-                visitor.getCurrentQueueAttractionId()
+                visitor.getCurrentQueueAttractionId(),
+                visitor.getCurrentLocationAttractionId()
         );
     }
 
@@ -331,9 +396,24 @@ public class VisitorApiController {
                 position >= 0 ? position : null,
                 totalInQueue,
                 attraction.getEstimatedWaitTime(),
+                attraction.getFormattedWaitTime(),
+                attraction.getPeopleWaiting(),
                 visitor.getTicketType(),
                 visitor.getVirtualBalance(),
                 message
         );
+    }
+
+    private String resolveClosedAttractionMessage(Attraction attraction) {
+        if (attraction == null || attraction.getEstado() == null) {
+            return "La atraccion no se encuentra disponible en este momento";
+        }
+        if ("MANTENIMIENTO".equalsIgnoreCase(attraction.getEstado())) {
+            return "Esta atraccion se encuentra cerrada por mantenimiento tecnico. Disculpe las molestias.";
+        }
+        if ("CLIMA".equalsIgnoreCase(attraction.getEstado())) {
+            return "Atraccion temporalmente cerrada debido a condiciones climaticas adversas por seguridad.";
+        }
+        return "La atraccion no se encuentra disponible en este momento";
     }
 }

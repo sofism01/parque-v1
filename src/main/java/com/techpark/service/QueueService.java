@@ -1,12 +1,20 @@
 package com.techpark.service;
 
-import com.techpark.datastructures.PriorityQueue;
+import com.techpark.dto.AdminQueueBreakdownDto;
+import com.techpark.model.Attraction;
+import com.techpark.model.AttractionStatus;
+import com.techpark.model.ClosureReason;
 import com.techpark.model.QueueEntry;
 import com.techpark.model.TicketType;
+import com.techpark.model.Visitor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,105 +23,188 @@ import java.util.Map;
  */
 @Service
 public class QueueService {
-    private Map<Long, PriorityQueue<QueueEntry>> attractionQueues;
-    private Map<Long, Map<Long, Integer>> visitorPositionsByAttraction;
+    private static final int MAINTENANCE_VISITOR_THRESHOLD = 500;
+
+    private final AttractionService attractionService;
+    private final AuthService authService;
+    private final ParkDataBootstrapService parkDataBootstrapService;
+    private double ingresosTotales;
 
     public QueueService() {
-        this.attractionQueues = new HashMap<>();
-        this.visitorPositionsByAttraction = new HashMap<>();
+        this.attractionService = null;
+        this.authService = null;
+        this.parkDataBootstrapService = null;
+        this.ingresosTotales = 0.0;
     }
 
-    public int addVisitorToQueue(Long attractionId, Long visitorId, String visitorName, TicketType ticketType) {
-        PriorityQueue<QueueEntry> queue = attractionQueues.computeIfAbsent(attractionId, k -> new PriorityQueue<>());
-        QueueEntry entry = new QueueEntry(visitorId, visitorName, ticketType, queue.size() + 1);
-        queue.enqueue(entry);
-        updatePositions(attractionId);
-        return getQueuePosition(attractionId, visitorId);
+    @Autowired
+    public QueueService(@Lazy AttractionService attractionService,
+                        AuthService authService,
+                        @Lazy ParkDataBootstrapService parkDataBootstrapService) {
+        this.attractionService = attractionService;
+        this.authService = authService;
+        this.parkDataBootstrapService = parkDataBootstrapService;
+        this.ingresosTotales = 0.0;
+    }
+
+    public QueueService(AttractionService attractionService, AuthService authService) {
+        this(attractionService, authService, null);
+    }
+
+    public int addVisitorToQueue(Long attractionId, Visitor visitor) {
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null || visitor == null) {
+            return -1;
+        }
+        if (!AttractionStatus.ACTIVA.equals(attraction.getStatus())) {
+            return -1;
+        }
+        chargeVisitorForQueue(attraction, visitor);
+
+        attraction.enqueueVisitor(visitor);
+        updatePositions(attraction);
+        return getQueuePosition(attractionId, visitor.getId());
+    }
+
+    public int addVisitorToQueue(Long attractionId, Long visitorId, String username, TicketType ticketType) {
+        if (visitorId == null) {
+            return -1;
+        }
+
+        Visitor visitor = authService != null ? authService.getVisitor(visitorId) : null;
+        if (visitor == null) {
+            visitor = new Visitor();
+            visitor.setId(visitorId);
+            visitor.setUsername(username != null ? username : "Visitante " + visitorId);
+            visitor.setPassword("user123");
+            visitor.setRole("VISITOR");
+            visitor.setActive(true);
+            visitor.setTicketType(ticketType != null ? ticketType : TicketType.GENERAL);
+            visitor.setPositionInQueue(-1);
+        } else if (ticketType != null) {
+            visitor.setTicketType(ticketType);
+        }
+
+        return addVisitorToQueue(attractionId, visitor);
     }
 
     public QueueEntry getNextInQueue(Long attractionId) {
-        PriorityQueue<QueueEntry> queue = attractionQueues.get(attractionId);
-
-        if (queue != null && !queue.isEmpty()) {
-            QueueEntry nextEntry = queue.dequeue();
-            removeVisitorPosition(attractionId, nextEntry.getVisitorId());
-            updatePositions(attractionId);
-            return nextEntry;
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null) {
+            return null;
         }
 
-        return null;
+        Visitor visitor = advanceQueue(attraction);
+        return visitor != null ? toQueueEntry(visitor, -1) : null;
     }
 
     public int getQueuePosition(Long attractionId, Long visitorId) {
-        return visitorPositionsByAttraction
-                .getOrDefault(attractionId, new HashMap<>())
-                .getOrDefault(visitorId, -1);
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null || visitorId == null) {
+            return -1;
+        }
+
+        List<Visitor> orderedQueue = attraction.getOrderedQueueSnapshot();
+        for (int index = 0; index < orderedQueue.size(); index++) {
+            Visitor visitor = orderedQueue.get(index);
+            if (visitor != null && visitorId.equals(visitor.getId())) {
+                return index + 1;
+            }
+        }
+        return -1;
     }
 
     public int getQueueSize(Long attractionId) {
-        PriorityQueue<QueueEntry> queue = attractionQueues.get(attractionId);
-        return queue != null ? queue.size() : 0;
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        return attraction != null ? attraction.getPeopleWaiting() : 0;
+    }
+
+    public AdminQueueBreakdownDto getQueueBreakdown(Long attractionId) {
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null) {
+            return new AdminQueueBreakdownDto(0, 0, 0, 0);
+        }
+
+        int conteoFastPass = 0;
+        int conteoFamiliar = 0;
+        int conteoGeneral = 0;
+
+        for (Visitor visitor : attraction.getOrderedQueueSnapshot()) {
+            TicketType ticketType = visitor != null && visitor.getTicketType() != null
+                    ? visitor.getTicketType()
+                    : TicketType.GENERAL;
+
+            switch (ticketType) {
+                case FAST_PASS -> conteoFastPass++;
+                case FAMILIAR -> conteoFamiliar++;
+                default -> conteoGeneral++;
+            }
+        }
+
+        return new AdminQueueBreakdownDto(
+                conteoFastPass + conteoFamiliar + conteoGeneral,
+                conteoFastPass,
+                conteoFamiliar,
+                conteoGeneral
+        );
     }
 
     public List<QueueEntry> getFullQueue(Long attractionId) {
-        PriorityQueue<QueueEntry> queue = attractionQueues.get(attractionId);
-
-        if (queue != null) {
-            return queue.getAllElements();
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null) {
+            return new ArrayList<>();
         }
 
-        return new ArrayList<>();
+        List<QueueEntry> entries = new ArrayList<>();
+        List<Visitor> orderedQueue = attraction.getOrderedQueueSnapshot();
+        for (int index = 0; index < orderedQueue.size(); index++) {
+            entries.add(toQueueEntry(orderedQueue.get(index), index + 1));
+        }
+        entries.sort(QueueEntry::compareTo);
+        return entries;
     }
 
     public boolean removeVisitorFromQueue(Long attractionId, Long visitorId) {
-        PriorityQueue<QueueEntry> queue = attractionQueues.get(attractionId);
-
-        if (queue != null && !queue.isEmpty()) {
-            List<QueueEntry> entries = queue.getAllElements();
-            List<QueueEntry> remainingEntries = new ArrayList<>();
-            boolean removed = false;
-            for (QueueEntry entry : entries) {
-                if (entry.getVisitorId().equals(visitorId)) {
-                    removeVisitorPosition(attractionId, visitorId);
-                    removed = true;
-                } else {
-                    remainingEntries.add(entry);
-                }
-            }
-
-            if (removed) {
-                PriorityQueue<QueueEntry> rebuiltQueue = new PriorityQueue<>();
-                for (QueueEntry entry : remainingEntries) {
-                    rebuiltQueue.enqueue(entry);
-                }
-                attractionQueues.put(attractionId, rebuiltQueue);
-                updatePositions(attractionId);
-                return true;
-            }
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null || visitorId == null) {
+            return false;
         }
 
-        return false;
+        boolean removed = attraction.removeVisitorFromQueue(visitorId);
+        if (removed) {
+            Visitor visitor = authService.getVisitor(visitorId);
+            if (visitor != null) {
+                visitor.setPositionInQueue(-1);
+            }
+            updatePositions(attraction);
+        }
+        return removed;
     }
 
     public void clearQueue(Long attractionId) {
-        PriorityQueue<QueueEntry> queue = attractionQueues.get(attractionId);
-
-        if (queue != null) {
-            attractionQueues.remove(attractionId);
-            visitorPositionsByAttraction.remove(attractionId);
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null) {
+            return;
         }
+
+        clearQueueState(attraction);
     }
 
     public int estimateWaitTime(Long attractionId, int capacityPerCycle, int cycleTimeMinutes) {
         int queueSize = getQueueSize(attractionId);
+        if (capacityPerCycle <= 0 || cycleTimeMinutes <= 0) {
+            return 0;
+        }
         int cycles = (int) Math.ceil((double) queueSize / capacityPerCycle);
         return cycles * cycleTimeMinutes;
     }
 
     public Map<Long, Integer> getQueueStats() {
-        Map<Long, Integer> stats = new HashMap<>();
-        for (Map.Entry<Long, PriorityQueue<QueueEntry>> entry : attractionQueues.entrySet()) {
-            stats.put(entry.getKey(), entry.getValue().size());
+        Map<Long, Integer> stats = new LinkedHashMap<>();
+        List<Attraction> attractions = new ArrayList<>(attractionService.getAllAttractions());
+        attractions.sort(Comparator.comparing(Attraction::getId));
+        for (Attraction attraction : attractions) {
+            stats.put(attraction.getId(), attraction.getPeopleWaiting());
         }
         return stats;
     }
@@ -123,7 +214,8 @@ public class QueueService {
             return null;
         }
 
-        for (QueueEntry entry : getFullQueue(attractionId)) {
+        List<QueueEntry> queueEntries = getFullQueue(attractionId);
+        for (QueueEntry entry : queueEntries) {
             if (visitorId.equals(entry.getVisitorId())) {
                 return entry;
             }
@@ -132,38 +224,40 @@ public class QueueService {
     }
 
     public void restoreQueues(Map<Long, List<QueueEntry>> queuesByAttraction) {
-        attractionQueues.clear();
-        visitorPositionsByAttraction.clear();
+        for (Attraction attraction : attractionService.getAllAttractions()) {
+            attraction.restoreQueue(new ArrayList<>());
+        }
 
         if (queuesByAttraction == null) {
             return;
         }
 
         for (Map.Entry<Long, List<QueueEntry>> queueEntry : queuesByAttraction.entrySet()) {
-            Long attractionId = queueEntry.getKey();
-            if (attractionId == null) {
+            Attraction attraction = attractionService.getAttractionById(queueEntry.getKey());
+            if (attraction == null) {
                 continue;
             }
 
-            PriorityQueue<QueueEntry> rebuiltQueue = new PriorityQueue<>();
+            List<Visitor> restoredVisitors = new ArrayList<>();
             List<QueueEntry> entries = queueEntry.getValue();
             if (entries != null) {
+                entries.sort(QueueEntry::compareTo);
                 for (QueueEntry entry : entries) {
-                    if (entry != null) {
-                        rebuiltQueue.enqueue(entry);
+                    Visitor visitor = resolveQueueVisitor(entry);
+                    if (visitor != null) {
+                        restoredVisitors.add(visitor);
                     }
                 }
             }
-
-            attractionQueues.put(attractionId, rebuiltQueue);
-            updatePositions(attractionId);
+            attraction.restoreQueue(restoredVisitors);
+            updatePositions(attraction);
         }
     }
 
     public Map<Long, List<QueueEntry>> snapshotQueues() {
-        Map<Long, List<QueueEntry>> snapshot = new HashMap<>();
-        for (Map.Entry<Long, PriorityQueue<QueueEntry>> entry : attractionQueues.entrySet()) {
-            snapshot.put(entry.getKey(), entry.getValue().getAllElements());
+        Map<Long, List<QueueEntry>> snapshot = new LinkedHashMap<>();
+        for (Attraction attraction : attractionService.getAllAttractions()) {
+            snapshot.put(attraction.getId(), getFullQueue(attraction.getId()));
         }
         return snapshot;
     }
@@ -174,32 +268,179 @@ public class QueueService {
         return cancelledEntries;
     }
 
-    private void updatePositions(Long attractionId) {
-        PriorityQueue<QueueEntry> queue = attractionQueues.get(attractionId);
-        if (queue == null) {
-            visitorPositionsByAttraction.remove(attractionId);
+    public List<QueueEntry> cancelQueueWithAlert(Long attractionId, String mensajeAlerta) {
+        Attraction attraction = attractionService.getAttractionById(attractionId);
+        if (attraction == null) {
+            return new ArrayList<>();
+        }
+
+        List<QueueEntry> cancelledEntries = getFullQueue(attractionId);
+        for (Visitor visitor : attraction.getOrderedQueueSnapshot()) {
+            if (visitor == null) {
+                continue;
+            }
+            visitor.setMensajeAlerta(mensajeAlerta);
+        }
+        clearQueueState(attraction);
+        return cancelledEntries;
+    }
+
+    public double getIngresosTotales() {
+        return ingresosTotales;
+    }
+
+    public void setIngresosTotales(double ingresosTotales) {
+        this.ingresosTotales = Math.max(ingresosTotales, 0.0);
+    }
+
+    @Scheduled(fixedRate = 30000)
+    public synchronized void procesarAvanceDeColas() {
+        if (attractionService == null) {
             return;
         }
 
-        List<QueueEntry> orderedEntries = new ArrayList<>(queue.getAllElements());
-        orderedEntries.sort(QueueEntry::compareTo);
+        boolean hasChanges = false;
+        for (Attraction attraction : attractionService.getAllAttractions()) {
+            if (!isAttractionEligibleForAdvance(attraction)) {
+                continue;
+            }
 
-        Map<Long, Integer> positions = new HashMap<>();
-        for (int i = 0; i < orderedEntries.size(); i++) {
-            QueueEntry entry = orderedEntries.get(i);
-            entry.setPositionInQueue(i + 1);
-            positions.put(entry.getVisitorId(), i + 1);
-        }
-        visitorPositionsByAttraction.put(attractionId, positions);
-    }
-
-    private void removeVisitorPosition(Long attractionId, Long visitorId) {
-        Map<Long, Integer> positions = visitorPositionsByAttraction.get(attractionId);
-        if (positions != null) {
-            positions.remove(visitorId);
-            if (positions.isEmpty()) {
-                visitorPositionsByAttraction.remove(attractionId);
+            Visitor processedVisitor = advanceQueue(attraction);
+            if (processedVisitor != null) {
+                hasChanges = true;
+                applyAutomaticMaintenance(attraction);
             }
         }
+
+        if (hasChanges && parkDataBootstrapService != null) {
+            parkDataBootstrapService.saveData();
+        }
+    }
+
+    private void updatePositions(Attraction attraction) {
+        if (attraction == null) {
+            return;
+        }
+
+        List<Visitor> orderedQueue = attraction.getOrderedQueueSnapshot();
+        for (int index = 0; index < orderedQueue.size(); index++) {
+            Visitor visitor = orderedQueue.get(index);
+            if (visitor != null) {
+                visitor.setPositionInQueue(index + 1);
+                visitor.setCurrentQueueAttractionId(attraction.getId());
+            }
+        }
+    }
+
+    private QueueEntry toQueueEntry(Visitor visitor, int position) {
+        if (visitor == null) {
+            return null;
+        }
+        return new QueueEntry(
+                visitor.getId(),
+                visitor.getUsername(),
+                visitor.getTicketType(),
+                resolvePriority(visitor.getTicketType()),
+                position,
+                position > 0 ? position : System.currentTimeMillis()
+        );
+    }
+
+    private Visitor resolveQueueVisitor(QueueEntry entry) {
+        if (entry == null || entry.getVisitorId() == null) {
+            return null;
+        }
+
+        Visitor visitor = authService.getVisitor(entry.getVisitorId());
+        if (visitor != null) {
+            if (entry.getTicketType() != null) {
+                visitor.setTicketType(entry.getTicketType());
+            }
+            return visitor;
+        }
+
+        Visitor transientVisitor = new Visitor();
+        transientVisitor.setId(entry.getVisitorId());
+        transientVisitor.setUsername(entry.getVisitorName() != null ? entry.getVisitorName() : "Visitante " + entry.getVisitorId());
+        transientVisitor.setPassword("user123");
+        transientVisitor.setRole("VISITOR");
+        transientVisitor.setActive(true);
+        transientVisitor.setTicketType(entry.getTicketType() != null ? entry.getTicketType() : TicketType.GENERAL);
+        transientVisitor.setPositionInQueue(entry.getPositionInQueue());
+        transientVisitor.setCurrentQueueAttractionId(null);
+        return transientVisitor;
+    }
+
+    private int resolvePriority(TicketType ticketType) {
+        return TicketType.FAST_PASS.equals(ticketType) ? 1 : 2;
+    }
+
+    private boolean isAttractionEligibleForAdvance(Attraction attraction) {
+        return attraction != null
+                && AttractionStatus.ACTIVA.equals(attraction.getStatus())
+                && attraction.getPeopleWaiting() > 0;
+    }
+
+    private Visitor advanceQueue(Attraction attraction) {
+        if (attraction == null) {
+            return null;
+        }
+
+        Visitor visitor = attraction.dequeueVisitor();
+        if (visitor == null) {
+            return null;
+        }
+
+        attraction.addVisitor();
+        visitor.addVisit(attraction.getId());
+        visitor.addHistorialAtraccion(attraction.getName());
+        visitor.setCurrentLocationAttractionId(attraction.getId());
+        visitor.setPositionInQueue(-1);
+        visitor.setCurrentQueueAttractionId(null);
+        updatePositions(attraction);
+        return visitor;
+    }
+
+    private void applyAutomaticMaintenance(Attraction attraction) {
+        if (attraction == null || attraction.getVisitantesTotales() < MAINTENANCE_VISITOR_THRESHOLD) {
+            return;
+        }
+        if (!AttractionStatus.MANTENIMIENTO.equals(attraction.getStatus())) {
+            attraction.changeStatus(AttractionStatus.MANTENIMIENTO, ClosureReason.TECNICO);
+        }
+        if (attraction.getPeopleWaiting() > 0) {
+            cancelQueueWithAlert(attraction.getId(), buildClosureAlertMessage(attraction, "MANTENIMIENTO"));
+        }
+    }
+
+    private void clearQueueState(Attraction attraction) {
+        for (Visitor visitor : attraction.getOrderedQueueSnapshot()) {
+            if (visitor != null) {
+                visitor.setPositionInQueue(-1);
+                visitor.setCurrentQueueAttractionId(null);
+            }
+        }
+        attraction.restoreQueue(new ArrayList<>());
+    }
+
+    private String buildClosureAlertMessage(Attraction attraction, String razon) {
+        return "La atraccion " + attraction.getName() + " ha cerrado por " + razon + ". Has sido removido de la fila.";
+    }
+
+    private void chargeVisitorForQueue(Attraction attraction, Visitor visitor) {
+        if (attraction == null || visitor == null) {
+            return;
+        }
+        if (visitor.getId() == null || authService == null || authService.getVisitor(visitor.getId()) == null) {
+            return;
+        }
+
+        double costo = attraction.getAdditionalCost();
+        if (visitor.getVirtualBalance() < costo) {
+            throw new IllegalStateException("Saldo insuficiente para esta atraccion");
+        }
+
+        visitor.setVirtualBalance(visitor.getVirtualBalance() - costo);
+        ingresosTotales += costo;
     }
 }

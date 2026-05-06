@@ -1,4 +1,6 @@
 package com.techpark.controller;
+import com.techpark.dto.AdminAttractionDto;
+import com.techpark.dto.AdminQueueBreakdownDto;
 import com.techpark.dto.AdminOperatorDto;
 import com.techpark.dto.AdminZoneDto;
 import com.techpark.dto.GraphSnapshotDto;
@@ -6,12 +8,12 @@ import com.techpark.model.Attraction;
 import com.techpark.model.Operator;
 import com.techpark.model.Zone;
 import com.techpark.service.AttractionService;
-import com.techpark.service.AuthService;
 import com.techpark.service.GraphService;
 import com.techpark.service.OperatorService;
 import com.techpark.service.ParkDataBootstrapService;
 import com.techpark.service.QueueService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,14 +46,19 @@ public class AdminApiController {
     private QueueService queueService;
 
     @Autowired
-    private AuthService authService;
-
-    @Autowired
     private ParkDataBootstrapService parkDataBootstrapService;
 
     @GetMapping("/attractions")
-    public ResponseEntity<List<Attraction>> getAllAttractions() {
-        return ResponseEntity.ok(attractionService.getAllAttractions());
+    public ResponseEntity<List<AdminAttractionDto>> getAllAttractions() {
+        List<AdminAttractionDto> attractions = new ArrayList<>();
+        for (Attraction attraction : attractionService.getAllAttractions()) {
+            AdminQueueBreakdownDto queueBreakdown = queueService.getQueueBreakdown(attraction.getId());
+            attractions.add(AdminAttractionDto.from(attraction, queueBreakdown));
+        }
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore().mustRevalidate())
+                .body(attractions);
     }
 
     @PostMapping("/attractions")
@@ -59,6 +66,7 @@ public class AdminApiController {
         attractionService.addAttraction(attraction);
         graphService.addAttractionVertex(attraction);
         parkDataBootstrapService.saveData();
+        parkDataBootstrapService.reloadDataFromDisk();
         return ResponseEntity.ok(attraction);
     }
 
@@ -71,6 +79,7 @@ public class AdminApiController {
 
         attractionService.deleteAttraction(id);
         parkDataBootstrapService.saveData();
+        parkDataBootstrapService.reloadDataFromDisk();
         graphService.recargarGrafo();
         return ResponseEntity.ok(Map.of("message", "Atraccion eliminada correctamente"));
     }
@@ -80,6 +89,7 @@ public class AdminApiController {
         try {
             Attraction updatedAttraction = attractionService.updateAttraction(id, attraction);
             parkDataBootstrapService.saveData();
+            parkDataBootstrapService.reloadDataFromDisk();
             graphService.recargarGrafo();
             return ResponseEntity.ok(updatedAttraction);
         } catch (IllegalArgumentException exception) {
@@ -155,13 +165,16 @@ public class AdminApiController {
 
     @GetMapping("/graph")
     public ResponseEntity<GraphSnapshotDto> getGraph() {
-        return ResponseEntity.ok(graphService.getGraphSnapshot());
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore().mustRevalidate())
+                .body(graphService.getGraphSnapshot());
     }
 
     @PostMapping("/alerts/storm")
     public ResponseEntity<Map<String, String>> triggerStormAlert() {
         attractionService.closeAttractionsByWeather("Tormenta reportada desde panel de administracion");
         parkDataBootstrapService.saveData();
+        parkDataBootstrapService.reloadDataFromDisk();
         return ResponseEntity.ok(Map.of("message", "Alerta de tormenta aplicada"));
     }
 

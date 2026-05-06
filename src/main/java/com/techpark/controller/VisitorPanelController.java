@@ -88,11 +88,30 @@ public class VisitorPanelController {
             return;
         }
 
-        int position = queueService.addVisitorToQueue(
-                selectedAttraction.getId(),
-                visitor.getId(),
-                visitor.getUsername(),
-                visitor.getTicketType());
+        int position;
+        try {
+            position = queueService.addVisitorToQueue(
+                    selectedAttraction.getId(),
+                    visitor.getId(),
+                    visitor.getUsername(),
+                    visitor.getTicketType());
+        } catch (IllegalStateException exception) {
+            visitor.setPositionInQueue(-1);
+            if (queueStatusLabel != null) {
+                queueStatusLabel.setText(exception.getMessage());
+            }
+            refreshQueuePosition();
+            return;
+        }
+
+        if (position < 0) {
+            visitor.setPositionInQueue(-1);
+            if (queueStatusLabel != null) {
+                queueStatusLabel.setText("La atraccion no esta disponible para fila");
+            }
+            refreshQueuePosition();
+            return;
+        }
 
         visitor.setPositionInQueue(position);
         if (queueStatusLabel != null) {

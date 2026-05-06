@@ -44,6 +44,7 @@ public class AuthService {
         visitor.setHeight(1.75);
         visitor.setVirtualBalance(100.0);
         visitor.setTicketType(TicketType.GENERAL);
+        visitor.setCurrentLocationAttractionId(1L);
         users.put("visitor", visitor);
     }
 
@@ -209,6 +210,9 @@ public class AuthService {
         if (visitor.getVisitHistory() == null) {
             visitor.setVisitHistory(new LinkedList<>());
         }
+        if (visitor.getHistorialAtracciones() == null) {
+            visitor.setHistorialAtracciones(new ArrayList<>());
+        }
         if (visitor.getNotifications() == null) {
             visitor.setNotifications(new ArrayList<>());
         }
@@ -217,6 +221,9 @@ public class AuthService {
         }
         if (visitor.getPositionInQueue() == 0) {
             visitor.setPositionInQueue(-1);
+        }
+        if (visitor.getCurrentLocationAttractionId() == null) {
+            visitor.setCurrentLocationAttractionId(1L);
         }
     }
 }

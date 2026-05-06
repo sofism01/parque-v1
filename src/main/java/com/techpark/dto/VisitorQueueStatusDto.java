@@ -12,6 +12,8 @@ public class VisitorQueueStatusDto {
     private Integer position;
     private Integer totalInQueue;
     private Integer estimatedWaitTime;
+    private String formattedWaitTime;
+    private Integer peopleWaiting;
     private TicketType ticketType;
     private Double remainingBalance;
     private String message;

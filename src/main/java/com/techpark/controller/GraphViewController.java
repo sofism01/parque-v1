@@ -36,8 +36,6 @@ public class GraphViewController {
 
     private List<Attraction> highlightedPath;
     private Long selectedStartAttractionId;
-    private Long selectedDestinationAttractionId;
-
     public GraphViewController(AttractionService attractionService) {
         this.attractionService = attractionService;
     }
@@ -64,7 +62,6 @@ public class GraphViewController {
 
     public void renderShortestPathAsync(Long startAttractionId, Long destinationAttractionId) {
         this.selectedStartAttractionId = startAttractionId;
-        this.selectedDestinationAttractionId = destinationAttractionId;
 
         Task<List<Attraction>> pathTask = new Task<>() {
             @Override
@@ -217,9 +214,9 @@ public class GraphViewController {
             return Color.web("#dc2626");
         }
         if (AttractionStatus.MANTENIMIENTO.equals(status)) {
-            return Color.web("#f97316");
+            return Color.web("#dc2626");
         }
-        return Color.web("#16a34a");
+        return Color.web("#28a745");
     }
 
     private String buildEdgeKey(Long sourceId, Long destinationId) {

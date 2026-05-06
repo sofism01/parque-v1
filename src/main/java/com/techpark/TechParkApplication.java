@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 @SpringBootApplication(scanBasePackages = "com.techpark")
+@EnableScheduling
 public class TechParkApplication {
     private static final Path DATA_FILE_PATH = Path.of("data.json");
     private static final String DEFAULT_DATA_JSON = "{\"attractions\":[], \"zones\":[], \"operators\":[], \"connections\":[]}";

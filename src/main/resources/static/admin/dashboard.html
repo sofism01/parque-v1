@@ -92,6 +92,7 @@
                                 <th>Visitantes</th>
                                 <th>Estado</th>
                                 <th>Tiempo Espera</th>
+                                <th>Personas en Fila</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -227,6 +228,17 @@
                     <button type="submit" class="btn-primary" id="attractionSubmitButton">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="queueInfoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('queueInfoModal')">&times;</span>
+            <h2 id="queueInfoModalTitle">Detalle de Fila</h2>
+            <div class="modal-body">
+                <p id="queueInfoSummary">Personas en fila: 0</p>
+                <p id="queueInfoBreakdown">Fast Pass: 0 | Familiar: 0 | General: 0</p>
+            </div>
         </div>
     </div>
 

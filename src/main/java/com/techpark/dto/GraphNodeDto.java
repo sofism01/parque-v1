@@ -12,6 +12,7 @@ public class GraphNodeDto {
     private String name;
     private String type;
     private String status;
+    private String estado;
     private Long zoneId;
     private String zoneName;
     private Double posX;

@@ -1,7 +1,9 @@
 package com.techpark.controller;
 
 import com.techpark.model.QueueEntry;
-import com.techpark.model.TicketType;
+import com.techpark.model.Visitor;
+import com.techpark.service.AuthService;
+import com.techpark.service.ParkDataBootstrapService;
 import com.techpark.service.QueueService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,14 +30,33 @@ public class QueueController {
     @Autowired
     private QueueService queueService;
 
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private ParkDataBootstrapService parkDataBootstrapService;
+
     @PostMapping("/add-visitor")
     public ResponseEntity<Map<String, Object>> addVisitorToQueue(@RequestBody Map<String, Object> request) {
         Long attractionId = ((Number) request.get("attractionId")).longValue();
         Long visitorId = ((Number) request.get("visitorId")).longValue();
-        String visitorName = (String) request.get("visitorName");
-        TicketType ticketType = TicketType.valueOf(((String) request.get("ticketType")).toUpperCase());
+        Visitor visitor = authService.getVisitor(visitorId);
+        if (visitor == null) {
+            return ResponseEntity.notFound().build();
+        }
 
-        int position = queueService.addVisitorToQueue(attractionId, visitorId, visitorName, ticketType);
+        int position;
+        try {
+            position = queueService.addVisitorToQueue(attractionId, visitor);
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
+        }
+        if (position < 0) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "La atraccion no se encuentra disponible para unirse a la fila"
+            ));
+        }
+        parkDataBootstrapService.saveData();
 
         return ResponseEntity.ok(Map.of(
                 "position", position,
