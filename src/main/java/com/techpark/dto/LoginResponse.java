@@ -17,4 +17,6 @@ public class LoginResponse {
     private String role;
     private Long userId;
     private String username;
+    private Long zoneId;
+    private String zoneName;
 }

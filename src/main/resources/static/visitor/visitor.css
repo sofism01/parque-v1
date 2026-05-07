@@ -12,6 +12,9 @@
     --primary-strong: #117864;
     --danger: #d35454;
     --warning: #d7a230;
+    --crowd-hot: #f97316;
+    --crowd-hot-strong: #ef4444;
+    --crowd-calm: #22c55e;
     --shadow-lg: 0 24px 60px rgba(24, 39, 56, 0.12);
     --shadow-md: 0 14px 34px rgba(24, 39, 56, 0.08);
     --radius-xl: 28px;
@@ -820,5 +823,394 @@ select {
         bottom: 16px;
         left: 16px;
         min-width: 0;
+    }
+}
+
+.map-experience-card {
+    padding: 18px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top left, rgba(72, 187, 120, 0.1), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.1), transparent 24%),
+        rgba(255, 255, 255, 0.9);
+}
+
+.park-map-shell {
+    display: grid;
+    grid-template-columns: minmax(280px, 30%) minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+    min-height: 76vh;
+}
+
+.theme-park-stage {
+    position: relative;
+    min-height: 76vh;
+    height: 100%;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.36), transparent 10%),
+        radial-gradient(circle at 82% 22%, rgba(59, 130, 246, 0.16), transparent 12%),
+        linear-gradient(180deg, #b9f2c9 0%, #8ed8a5 42%, #78c88e 100%);
+}
+
+.theme-park-stage::before {
+    content: "";
+    position: absolute;
+    inset: 6% 8% 10%;
+    border-radius: 999px;
+    opacity: 0.3;
+    background:
+        radial-gradient(circle at 50% 50%, transparent 0 22%, rgba(255, 248, 220, 0.9) 22.5% 24%, transparent 24.5%),
+        linear-gradient(115deg, transparent 0 24%, rgba(252, 239, 193, 0.85) 24.5% 28%, transparent 28.5% 100%),
+        linear-gradient(24deg, transparent 0 42%, rgba(252, 239, 193, 0.8) 42.5% 46%, transparent 46.5% 100%);
+    pointer-events: none;
+}
+
+.theme-park-stage::after {
+    content: "";
+    position: absolute;
+    right: 6%;
+    bottom: 8%;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(125, 211, 252, 0.85) 0%, rgba(56, 189, 248, 0.52) 46%, transparent 72%);
+    filter: blur(4px);
+    pointer-events: none;
+}
+
+#parkMap {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 76vh;
+    min-height: 620px;
+    border: none;
+    border-radius: 28px;
+    background: transparent;
+}
+
+.map-scene-badge {
+    position: absolute;
+    z-index: 2;
+    padding: 10px 14px;
+    border-radius: 999px;
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.map-scene-badge-top {
+    top: 18px;
+    right: 18px;
+}
+
+.map-scene-badge-bottom {
+    left: 18px;
+    bottom: 18px;
+}
+
+.map-overlay-panel {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    width: 100%;
+    max-width: 420px;
+    display: grid;
+    gap: 16px;
+    min-height: 100%;
+    padding: 20px;
+    border-radius: 24px;
+    color: #e5eef4;
+    background: linear-gradient(180deg, rgba(24, 39, 56, 0.82) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.26);
+    backdrop-filter: blur(16px);
+}
+
+.map-panel-header h3,
+.map-status-card h4,
+.route-box h4 {
+    margin: 0;
+}
+
+.map-panel-header p:last-child,
+.map-status-card p {
+    margin: 8px 0 0;
+    color: rgba(229, 238, 244, 0.8);
+    line-height: 1.5;
+}
+
+.map-panel-group {
+    display: grid;
+    gap: 12px;
+}
+
+.map-overlay-panel .info-chip {
+    color: #0f172a;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%);
+}
+
+.selection-mode-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.selector-chip {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    padding: 10px 12px;
+    color: rgba(229, 238, 244, 0.84);
+    background: rgba(255, 255, 255, 0.08);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.selector-chip.active {
+    color: #082f2b;
+    background: linear-gradient(135deg, #86efac 0%, #5eead4 100%);
+}
+
+.selector-chip:hover {
+    transform: translateY(-1px);
+}
+
+.map-field {
+    display: grid;
+    gap: 8px;
+}
+
+.map-field span {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(229, 238, 244, 0.84);
+}
+
+.map-overlay-panel select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.map-route-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+.map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    font-size: 0.82rem;
+    color: rgba(229, 238, 244, 0.78);
+}
+
+.map-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-open {
+    color: #22c55e;
+}
+
+.legend-closed {
+    color: #ef4444;
+}
+
+.legend-route {
+    color: #fde047;
+}
+
+.map-status-card,
+.map-overlay-panel .route-box {
+    margin: 0;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+}
+
+.map-tooltip {
+    position: absolute;
+    z-index: 5;
+    width: min(300px, calc(100vw - 32px));
+    padding: 14px;
+    border-radius: 18px;
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: 0 26px 48px rgba(15, 23, 42, 0.22);
+    backdrop-filter: blur(12px);
+    pointer-events: none;
+}
+
+.map-tooltip-media {
+    display: grid;
+    place-items: center;
+    height: 88px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    color: #ffffff;
+    font-size: 2rem;
+    background: linear-gradient(135deg, #1f8a70 0%, #355c7d 100%);
+}
+
+.map-tooltip-image {
+    display: block;
+    width: 100%;
+    height: 88px;
+    margin-bottom: 12px;
+    object-fit: cover;
+    border-radius: 14px;
+}
+
+.map-tooltip h4 {
+    margin: 0 0 6px;
+}
+
+.map-tooltip-meta {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 0.88rem;
+}
+
+.map-tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 0.84rem;
+    color: #334155;
+}
+
+.map-tooltip-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-tooltip-row i {
+    width: 14px;
+    text-align: center;
+    color: #1f8a70;
+}
+
+.theme-park-stage {
+    cursor: grab;
+}
+
+.theme-park-stage.is-panning {
+    cursor: grabbing;
+}
+
+.map-viewport-controls {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 4;
+    display: grid;
+    gap: 10px;
+}
+
+.map-viewport-btn {
+    min-width: 56px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 10px 14px;
+    color: #e5eef4;
+    background: linear-gradient(180deg, rgba(24, 39, 56, 0.88) 0%, rgba(15, 23, 42, 0.94) 100%);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.22);
+    backdrop-filter: blur(14px);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.map-viewport-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+.map-viewport-btn.reset {
+    min-width: 72px;
+    font-size: 0.86rem;
+}
+
+.route-metric {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(134, 239, 172, 0.12);
+    color: #dcfce7;
+}
+
+.route-step {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+}
+
+@media (max-width: 1180px) {
+    .park-map-shell {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .map-overlay-panel {
+        position: relative;
+        top: auto;
+        width: 100%;
+        max-width: none;
+        margin-top: 0;
+    }
+
+    .map-viewport-controls {
+        right: 14px;
+        bottom: 14px;
+    }
+}
+
+@media (max-width: 720px) {
+    #parkMap,
+    .theme-park-stage {
+        min-height: 480px;
+        height: 60vh;
+    }
+
+    .map-experience-card {
+        padding: 14px;
+    }
+
+    .theme-park-stage {
+        border-radius: 22px;
+    }
+
+    .map-overlay-panel {
+        padding: 16px;
+        border-radius: 20px;
+    }
+
+    .map-scene-badge-top {
+        top: 12px;
+        right: 12px;
+    }
+
+    .map-scene-badge-bottom {
+        left: 12px;
+        bottom: 12px;
     }
 }

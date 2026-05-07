@@ -39,6 +39,8 @@ async function handleLogin(e) {
             localStorage.setItem('role', data.role);
             localStorage.setItem('userId', data.userId);
             localStorage.setItem('username', data.username);
+            localStorage.setItem('zoneId', data.zoneId ?? '');
+            localStorage.setItem('zoneName', data.zoneName ?? '');
 
             successMessage.textContent = 'Login exitoso. Redirigiendo...';
             successMessage.style.display = 'block';
@@ -94,5 +96,7 @@ function logout() {
     localStorage.removeItem('role');
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
+    localStorage.removeItem('zoneId');
+    localStorage.removeItem('zoneName');
     window.location.href = 'index.html';
 }

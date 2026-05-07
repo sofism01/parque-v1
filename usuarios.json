@@ -9,12 +9,16 @@
     "documento": "DOC000001",
     "edad": 5,
     "estatura": 1.0,
-    "saldo": 100.0,
+    "saldo": 99.0,
     "tipo": "FAST_PASS",
-    "ubicacionActual": 1,
+    "ubicacionActual": 7,
     "favoritos": [],
-    "historial": [],
-    "historialAtracciones": [],
+    "historial": [
+      7
+    ],
+    "historialAtracciones": [
+      "1"
+    ],
     "notificaciones": [
       "Reserva cancelada por clima en Bahia Pirata. Motivo: TORMENTA_ELECTRICA"
     ],
@@ -144,18 +148,23 @@
     "documento": "DOC000008",
     "edad": 12,
     "estatura": 1.77,
-    "saldo": 100.0,
+    "saldo": 88.0,
     "tipo": "FAST_PASS",
     "ubicacionActual": 1,
     "favoritos": [],
-    "historial": [],
-    "historialAtracciones": [],
+    "historial": [
+      3,
+      1
+    ],
+    "historialAtracciones": [
+      "Rio Salvaje",
+      "Montana Rusa Andina"
+    ],
     "notificaciones": [
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA"
     ],
-    "mensajeAlerta": "La atraccion Rio Salvaje ha cerrado por CLIMA. Has sido removido de la fila.",
     "posicionEnFila": -1
   },
   {
@@ -890,17 +899,27 @@
     "documento": "DOC000047",
     "edad": 51,
     "estatura": 1.62,
-    "saldo": 87.0,
+    "saldo": 61.0,
     "tipo": "GENERAL",
-    "ubicacionActual": 6,
+    "ubicacionActual": 1,
     "favoritos": [],
     "historial": [
       7,
-      6
+      6,
+      3,
+      2,
+      3,
+      3,
+      1
     ],
     "historialAtracciones": [
       "1",
-      "Bahia Pirata"
+      "Bahia Pirata",
+      "Rio Salvaje",
+      "Torre Condor",
+      "Rio Salvaje",
+      "Rio Salvaje",
+      "Montana Rusa Andina"
     ],
     "notificaciones": [
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
@@ -918,12 +937,16 @@
     "documento": "DOC000048",
     "edad": 52,
     "estatura": 1.73,
-    "saldo": 100.0,
+    "saldo": 92.0,
     "tipo": "GENERAL",
     "ubicacionActual": 1,
     "favoritos": [],
-    "historial": [],
-    "historialAtracciones": [],
+    "historial": [
+      1
+    ],
+    "historialAtracciones": [
+      "Montana Rusa Andina"
+    ],
     "notificaciones": [
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA"
     ],

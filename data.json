@@ -10,8 +10,7 @@
       "attractionIds": [
         1,
         2,
-        5,
-        7
+        5
       ],
       "posX": 150.0,
       "posY": 100.0
@@ -38,6 +37,17 @@
       ],
       "posX": 500.0,
       "posY": 300.0
+    },
+    {
+      "id": 4,
+      "name": "Hola",
+      "maxCapacity": 132,
+      "operatorIds": [
+        201
+      ],
+      "attractionIds": [],
+      "posX": 100.0,
+      "posY": 320.0
     }
   ],
   "attractions": [
@@ -56,8 +66,8 @@
       "estado": "ABIERTA",
       "closureReason": "NINGUNO",
       "climateOverrideActive": false,
-      "accumulatedVisitors": 0,
-      "visitantesTotales": 0,
+      "accumulatedVisitors": 3,
+      "visitantesTotales": 3,
       "estimatedWaitTime": 0,
       "posX": 120.0,
       "posY": 120.0
@@ -77,8 +87,8 @@
       "estado": "ABIERTA",
       "closureReason": "NINGUNO",
       "climateOverrideActive": true,
-      "accumulatedVisitors": 260,
-      "visitantesTotales": 260,
+      "accumulatedVisitors": 261,
+      "visitantesTotales": 261,
       "estimatedWaitTime": 0,
       "posX": 180.0,
       "posY": 80.0
@@ -98,8 +108,8 @@
       "estado": "ABIERTA",
       "closureReason": "NINGUNO",
       "climateOverrideActive": true,
-      "accumulatedVisitors": 331,
-      "visitantesTotales": 331,
+      "accumulatedVisitors": 335,
+      "visitantesTotales": 335,
       "estimatedWaitTime": 0,
       "posX": 480.0,
       "posY": 280.0
@@ -166,27 +176,6 @@
       "estimatedWaitTime": 0,
       "posX": 530.0,
       "posY": 330.0
-    },
-    {
-      "id": 7,
-      "name": "1",
-      "type": "MECANICA_ALTURA",
-      "maxCapacityPerCycle": 1111,
-      "minHeight": 1.0,
-      "minAge": 1,
-      "estaturaMinima": 1.0,
-      "edadMinima": 1,
-      "additionalCost": 1.0,
-      "zoneId": 1,
-      "status": "ACTIVA",
-      "estado": "ABIERTA",
-      "closureReason": "NINGUNO",
-      "climateOverrideActive": true,
-      "accumulatedVisitors": 4,
-      "visitantesTotales": 4,
-      "estimatedWaitTime": 0,
-      "posX": 150.0,
-      "posY": 220.0
     }
   ],
   "connections": [
@@ -201,19 +190,9 @@
       "weight": 81
     },
     {
-      "sourceId": 1,
-      "destinationId": 7,
-      "weight": 104
-    },
-    {
       "sourceId": 2,
       "destinationId": 5,
       "weight": 54
-    },
-    {
-      "sourceId": 2,
-      "destinationId": 7,
-      "weight": 143
     },
     {
       "sourceId": 3,
@@ -232,13 +211,8 @@
     },
     {
       "sourceId": 4,
-      "destinationId": 7,
-      "weight": 200
-    },
-    {
-      "sourceId": 5,
-      "destinationId": 7,
-      "weight": 103
+      "destinationId": 5,
+      "weight": 294
     }
   ],
   "operators": [
@@ -258,9 +232,18 @@
       "email": "juano@gmail.com",
       "active": true,
       "assignedAttractionsIds": []
+    },
+    {
+      "id": 201,
+      "username": "Juanillo",
+      "password": "123",
+      "email": "juanillo@gmail.com",
+      "active": true,
+      "zoneId": 4,
+      "assignedAttractionsIds": []
     }
   ],
-  "ingresosTotales": 5.0,
+  "ingresosTotales": 52.0,
   "visitors": [
     {
       "id": 101,
@@ -272,16 +255,20 @@
       "document": "DOC000001",
       "age": 5,
       "height": 1.0,
-      "virtualBalance": 100.0,
+      "virtualBalance": 99.0,
       "ticketType": "FAST_PASS",
       "favoriteAttractions": [],
-      "visitHistory": [],
-      "historialAtracciones": [],
+      "visitHistory": [
+        7
+      ],
+      "historialAtracciones": [
+        "1"
+      ],
       "notifications": [
         "Reserva cancelada por clima en Bahia Pirata. Motivo: TORMENTA_ELECTRICA"
       ],
       "positionInQueue": -1,
-      "currentLocationAttractionId": 1
+      "currentLocationAttractionId": 7
     },
     {
       "id": 102,
@@ -407,17 +394,22 @@
       "document": "DOC000008",
       "age": 12,
       "height": 1.77,
-      "virtualBalance": 100.0,
+      "virtualBalance": 88.0,
       "ticketType": "FAST_PASS",
       "favoriteAttractions": [],
-      "visitHistory": [],
-      "historialAtracciones": [],
+      "visitHistory": [
+        3,
+        1
+      ],
+      "historialAtracciones": [
+        "Rio Salvaje",
+        "Montana Rusa Andina"
+      ],
       "notifications": [
         "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
         "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
         "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA"
       ],
-      "mensajeAlerta": "La atraccion Rio Salvaje ha cerrado por CLIMA. Has sido removido de la fila.",
       "positionInQueue": -1,
       "currentLocationAttractionId": 1
     },
@@ -1153,23 +1145,33 @@
       "document": "DOC000047",
       "age": 51,
       "height": 1.62,
-      "virtualBalance": 87.0,
+      "virtualBalance": 61.0,
       "ticketType": "GENERAL",
       "favoriteAttractions": [],
       "visitHistory": [
         7,
-        6
+        6,
+        3,
+        2,
+        3,
+        3,
+        1
       ],
       "historialAtracciones": [
         "1",
-        "Bahia Pirata"
+        "Bahia Pirata",
+        "Rio Salvaje",
+        "Torre Condor",
+        "Rio Salvaje",
+        "Rio Salvaje",
+        "Montana Rusa Andina"
       ],
       "notifications": [
         "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
         "Reserva cancelada por clima en 1. Motivo: TORMENTA_ELECTRICA"
       ],
       "positionInQueue": -1,
-      "currentLocationAttractionId": 6
+      "currentLocationAttractionId": 1
     },
     {
       "id": 148,
@@ -1181,11 +1183,15 @@
       "document": "DOC000048",
       "age": 52,
       "height": 1.73,
-      "virtualBalance": 100.0,
+      "virtualBalance": 92.0,
       "ticketType": "GENERAL",
       "favoriteAttractions": [],
-      "visitHistory": [],
-      "historialAtracciones": [],
+      "visitHistory": [
+        1
+      ],
+      "historialAtracciones": [
+        "Montana Rusa Andina"
+      ],
       "notifications": [
         "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA"
       ],
@@ -2204,10 +2210,6 @@
     },
     {
       "attractionId": 6,
-      "entries": []
-    },
-    {
-      "attractionId": 7,
       "entries": []
     }
   ]

@@ -700,6 +700,11 @@ async function saveOperator(event) {
         password: document.getElementById('operatorPassword').value
     };
 
+    if (!operator.email) {
+        showAlert('El correo del operador es obligatorio.', 'danger');
+        return;
+    }
+
     try {
         await apiFetch('/admin/operators', {
             method: 'POST',
@@ -707,7 +712,7 @@ async function saveOperator(event) {
         });
         document.getElementById('operatorForm').reset();
         closeModal('operatorModal');
-        showAlert('Operador creado exitosamente', 'success');
+        showAlert('Operador creado exitosamente. Password por defecto: operator123 si no definiste una.', 'success');
         await Promise.all([loadOperators(), loadZones()]);
     } catch (error) {
         showAlert(`No fue posible guardar el operador: ${error.message}`, 'danger');

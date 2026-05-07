@@ -262,9 +262,9 @@
             <span class="close" onclick="closeModal('operatorModal')">&times;</span>
             <h2>Nuevo Operador</h2>
             <form id="operatorForm" onsubmit="saveOperator(event)">
-                <input type="text" id="operatorUsername" placeholder="Usuario" required>
-                <input type="email" id="operatorEmail" placeholder="Correo electronico">
-                <input type="password" id="operatorPassword" placeholder="Contrasena" required>
+                <input type="text" id="operatorUsername" placeholder="Nombre visible del operador">
+                <input type="email" id="operatorEmail" placeholder="Correo electronico (login del operador)" required>
+                <input type="password" id="operatorPassword" placeholder="Contrasena opcional, por defecto operator123">
                 <button type="submit" class="btn-primary">Guardar</button>
             </form>
         </div>

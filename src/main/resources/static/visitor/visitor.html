@@ -135,36 +135,74 @@
                 </section>
 
                 <section id="mapa" class="tab-content active">
-                    <div class="content-card">
+                    <div class="content-card map-experience-card">
                         <div class="section-heading">
                             <div>
                                 <p class="section-kicker">Navegacion</p>
                                 <h3>Mapa del Parque</h3>
-                                <p>Visualiza el grafo del parque y calcula rutas seguras desde tu ubicacion actual.</p>
+                                <p>Explora un mapa interactivo del parque, selecciona origen y destino desde el lienzo y sigue la ruta recomendada sobre los senderos.</p>
                             </div>
                         </div>
 
-                        <div class="map-toolbar">
-                            <div id="currentLocationBadge" class="info-chip">Ubicacion actual: --</div>
-                            <select id="destinationNode"></select>
-                            <button class="btn-primary" onclick="calculateRoute()">
-                                <i class="fas fa-route"></i>
-                                <span>Calcular ruta</span>
-                            </button>
-                        </div>
+                        <div class="park-map-shell">
+                            <aside class="map-overlay-panel">
+                                <div class="map-panel-header">
+                                    <p class="section-kicker">Panel de Ruta</p>
+                                    <h3>Planifica tu recorrido</h3>
+                                    <p id="mapSelectionHint">Primero selecciona un punto de inicio en el mapa o en el selector manual.</p>
+                                </div>
 
-                        <div class="map-grid">
-                            <div class="map-card">
-                                <canvas id="parkMap" width="800" height="600"></canvas>
-                            </div>
-                            <aside class="map-sidebar">
-                                <h3>Estado del mapa</h3>
-                                <p id="mapStatus">Selecciona un destino para calcular la mejor ruta disponible.</p>
+                                <div class="map-panel-group">
+                                    <div id="currentLocationBadge" class="info-chip">Inicio: --</div>
+                                    <div class="selection-mode-switch" role="group" aria-label="Modo de seleccion en el mapa">
+                                        <button id="originPickerBtn" class="selector-chip active" type="button">Elegir inicio</button>
+                                        <button id="destinationPickerBtn" class="selector-chip" type="button">Elegir destino</button>
+                                    </div>
+                                </div>
+
+                                <div class="map-panel-group">
+                                    <label class="map-field">
+                                        <span>Origen manual</span>
+                                        <select id="originNode" aria-label="Selecciona tu ubicacion actual">
+                                            <option value="">Selecciona tu ubicacion actual</option>
+                                        </select>
+                                    </label>
+                                    <label class="map-field">
+                                        <span>Destino</span>
+                                        <select id="destinationNode" aria-label="Selecciona un destino">
+                                            <option value="">Selecciona un destino</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <button class="btn-primary map-route-btn" onclick="calculateRoute()">
+                                    <i class="fas fa-route"></i>
+                                    <span>Calcular ruta</span>
+                                </button>
+
+                                <div class="map-legend">
+                                    <span><i class="fas fa-circle legend-open"></i> Abierta</span>
+                                    <span><i class="fas fa-circle legend-closed"></i> Cerrada</span>
+                                    <span><i class="fas fa-wand-magic-sparkles legend-route"></i> Ruta activa</span>
+                                </div>
+
+                                <div class="map-status-card">
+                                    <h4>Estado del mapa</h4>
+                                    <p id="mapStatus">Selecciona un destino para calcular la mejor ruta disponible.</p>
+                                </div>
+
                                 <div id="routeInfo" class="route-box" hidden>
                                     <h4>Ruta recomendada</h4>
                                     <div id="routeList"></div>
                                 </div>
                             </aside>
+
+                            <div class="map-card theme-park-stage">
+                                <canvas id="parkMap" width="800" height="600"></canvas>
+                                <div class="map-scene-badge map-scene-badge-top">Tech-Park UQ</div>
+                                <div class="map-scene-badge map-scene-badge-bottom">Toca una atraccion para seleccionar origen o destino</div>
+                                <div id="mapTooltip" class="map-tooltip" hidden></div>
+                            </div>
                         </div>
                     </div>
                 </section>

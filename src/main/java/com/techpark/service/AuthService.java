@@ -72,6 +72,38 @@ public class AuthService {
         return null;
     }
 
+    public User getUserByUsername(String username) {
+        if (username == null) {
+            return null;
+        }
+        return users.get(username);
+    }
+
+    public Operator getOperatorByUsernameOrEmail(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return null;
+        }
+
+        User directUser = users.get(identifier);
+        if (directUser instanceof Operator operator) {
+            return operator;
+        }
+
+        for (User user : users.values()) {
+            if (user instanceof Operator operator
+                    && operator.getEmail() != null
+                    && operator.getEmail().equalsIgnoreCase(identifier.trim())) {
+                return operator;
+            }
+        }
+        return null;
+    }
+
+    public Operator resolveOperatorFromToken(String token) {
+        User user = validateToken(token);
+        return user instanceof Operator operator ? operator : null;
+    }
+
     public void logout(String token) {
         activeTokens.remove(token);
     }
@@ -118,6 +150,15 @@ public class AuthService {
             return false;
         }
 
+        for (User user : users.values()) {
+            if (user instanceof Operator existingOperator
+                    && operator.getEmail() != null
+                    && existingOperator.getEmail() != null
+                    && existingOperator.getEmail().equalsIgnoreCase(operator.getEmail())) {
+                return false;
+            }
+        }
+
         if (operator.getId() == null) {
             operator.setId(nextUserId());
         }
@@ -127,6 +168,7 @@ public class AuthService {
         if (operator.getAssignedAttractionsIds() == null) {
             operator.setAssignedAttractionsIds(new LinkedList<>());
         }
+        operator.setActive(true);
         users.put(operator.getUsername(), operator);
         return true;
     }

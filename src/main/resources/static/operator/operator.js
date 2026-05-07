@@ -1,381 +1,287 @@
-// Verificar autenticación
-if (!localStorage.getItem('token')) {
-    window.location.href = '../index.html';
-}
-
 const API_BASE_URL = 'http://localhost:8080/api';
-let attractions = [];
-let currentOperator = null;
-let selectedAttractionId = null;
+const DASHBOARD_REFRESH_MS = 5000;
 
-// Inicializar
-document.addEventListener('DOMContentLoaded', function() {
-    loadOperatorInfo();
-    loadAttractions();
-    initNavigation();
+let dashboardState = null;
+let refreshHandle = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!localStorage.getItem('token') || localStorage.getItem('role') !== 'OPERATOR') {
+        window.location.href = '../index.html';
+        return;
+    }
+
+    bindNavigation();
+    bindForms();
+
+    try {
+        await refreshDashboard(false);
+    } catch (error) {
+        showAlert(error.message || 'No fue posible cargar el panel del operador.', 'error');
+    }
+
+    refreshHandle = window.setInterval(() => {
+        refreshDashboard(false);
+    }, DASHBOARD_REFRESH_MS);
 });
 
-// Cargar información del operador
-async function loadOperatorInfo() {
-    const username = localStorage.getItem('username');
-    document.getElementById('operatorName').textContent = username;
-    document.getElementById('zoneInfo').textContent = 'Zona: Aventura'; // En una app real se traería del servidor
-}
+async function refreshDashboard(showToast = false) {
+    dashboardState = await apiFetch('/operator/dashboard');
+    renderOperatorMeta();
+    renderSummary();
+    renderAttractions();
+    renderRestrictionSelector();
+    renderCapacityCard(dashboardState.zoneCapacity);
 
-// Cargar atracciones
-async function loadAttractions() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/attractions`, {
-            headers: getAuthHeaders()
-        });
-        
-        if (response.ok) {
-            attractions = await response.json();
-            renderAttractionsDashboard();
-            populateAttractionSelects();
-        }
-    } catch (error) {
-        console.error('Error loading attractions:', error);
+    if (showToast) {
+        showAlert('Panel actualizado.', 'success');
     }
 }
 
-// Renderizar dashboard de atracciones
-function renderAttractionsDashboard() {
-    const dashboard = document.getElementById('attractionsDashboard');
-    dashboard.innerHTML = '';
-    
-    // Mostrar solo las atracciones de la zona del operador (zona 1 en este caso)
-    const zoneAttractions = attractions.filter(a => a.zoneId === 1);
-    
-    zoneAttractions.forEach(attraction => {
-        const panel = document.createElement('div');
-        panel.className = 'attraction-panel';
-        
-        const statusClass = attraction.status === 'ACTIVA' ? 'badge-success' : 
-                          attraction.status === 'MANTENIMIENTO' ? 'badge-warning' : 'badge-danger';
-        
-        panel.innerHTML = `
-            <div class="attraction-panel-header">
-                <h3>${attraction.name}</h3>
+function bindNavigation() {
+    document.querySelectorAll('.nav-link[data-section]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            const sectionId = link.dataset.section;
+
+            document.querySelectorAll('.nav-link[data-section]').forEach((item) => item.classList.remove('active'));
+            document.querySelectorAll('.section').forEach((section) => section.classList.remove('active'));
+
+            link.classList.add('active');
+            document.getElementById(sectionId)?.classList.add('active');
+        });
+    });
+}
+
+function bindForms() {
+    document.getElementById('restrictionForm')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await runRestrictionCheck();
+    });
+}
+
+function renderOperatorMeta() {
+    document.getElementById('operatorName').textContent = dashboardState.operatorName || localStorage.getItem('username') || '-';
+    document.getElementById('operatorEmail').textContent = dashboardState.operatorEmail || 'Sin correo';
+    document.getElementById('zoneName').textContent = dashboardState.zoneName || 'Sin zona';
+    document.getElementById('zonePill').textContent = dashboardState.zoneName || 'Zona sin asignar';
+    localStorage.setItem('zoneId', dashboardState.zoneId ?? '');
+    localStorage.setItem('zoneName', dashboardState.zoneName ?? '');
+}
+
+function renderSummary() {
+    const attractions = Array.isArray(dashboardState.attractions) ? dashboardState.attractions : [];
+    document.getElementById('totalAttractions').textContent = String(attractions.length);
+    document.getElementById('zoneOccupancyStat').textContent = formatCapacity(dashboardState.zoneCapacity);
+}
+
+function renderAttractions() {
+    const container = document.getElementById('attractionsDashboard');
+    const attractions = Array.isArray(dashboardState.attractions) ? dashboardState.attractions : [];
+
+    if (!attractions.length) {
+        container.innerHTML = '<div class="empty-state">No hay atracciones asociadas a esta zona.</div>';
+        return;
+    }
+
+    container.innerHTML = attractions.map((attraction) => `
+        <article class="attraction-card">
+            <div class="card-header">
+                <div>
+                    <p class="card-kicker">${attraction.zoneName || 'Zona'}</p>
+                    <h4>${attraction.name}</h4>
+                </div>
+                <span class="status-badge status-${normalizeState(attraction.estado)}">${normalizeState(attraction.estado)}</span>
             </div>
-            <div class="attraction-panel-body">
-                <div class="panel-stat">
-                    <span class="panel-stat-label">Estado:</span>
-                    <span class="panel-stat-value badge ${statusClass}">${attraction.status}</span>
+
+            <div class="metrics-grid">
+                <div class="metric">
+                    <span>Visitantes totales</span>
+                    <strong>${attraction.visitantesTotales}</strong>
                 </div>
-                <div class="panel-stat">
-                    <span class="panel-stat-label">Visitantes hoy:</span>
-                    <span class="panel-stat-value">${attraction.accumulatedVisitors}</span>
+                <div class="metric">
+                    <span>Meta de mantenimiento</span>
+                    <strong>${attraction.visitantesTotales} / ${attraction.maintenanceThreshold}</strong>
                 </div>
-                <div class="panel-stat">
-                    <span class="panel-stat-label">Capacidad/ciclo:</span>
-                    <span class="panel-stat-value">${attraction.maxCapacityPerCycle}</span>
+                <div class="metric">
+                    <span>Fila actual</span>
+                    <strong>${attraction.peopleWaiting}</strong>
                 </div>
-                <div class="panel-stat">
-                    <span class="panel-stat-label">Tiempo espera:</span>
-                    <span class="panel-stat-value">${attraction.estimatedWaitTime} min</span>
-                </div>
-                <div class="attraction-actions">
-                    <button class="btn-primary" onclick="showQueueForAttraction(${attraction.id})">Ver Fila</button>
-                    <button class="btn-secondary" onclick="openRevisionForm(${attraction.id})">Revisar</button>
+                <div class="metric">
+                    <span>Espera estimada</span>
+                    <strong>${attraction.estimatedWaitTime} s</strong>
                 </div>
             </div>
-        `;
-        
-        dashboard.appendChild(panel);
-    });
-}
 
-// Rellenar selectores de atracciones
-function populateAttractionSelects() {
-    const zoneAttractions = attractions.filter(a => a.zoneId === 1);
-    
-    [
-        'attractionSelect',
-        'attractionRevision',
-        'attractionStatus'
-    ].forEach(selectId => {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="">-- Selecciona una atracción --</option>';
-        
-        zoneAttractions.forEach(attraction => {
-            const option = document.createElement('option');
-            option.value = attraction.id;
-            option.textContent = attraction.name;
-            select.appendChild(option);
-        });
-    });
-}
-
-// Inicializar navegación
-function initNavigation() {
-    const navLinks = document.querySelectorAll('.op-nav-link');
-    navLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const href = this.getAttribute('href');
-            if (href && href.startsWith('#')) {
-                // Ocultar todas las secciones
-                document.querySelectorAll('.op-section').forEach(section => {
-                    section.classList.remove('active');
-                });
-                
-                // Mostrar la seleccionada
-                const sectionId = href.substring(1);
-                const section = document.getElementById(sectionId);
-                if (section) {
-                    section.classList.add('active');
-                }
-                
-                // Actualizar nav activo
-                navLinks.forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-            }
-        });
-    });
-}
-
-// Mostrar fila de una atracción
-function showQueueForAttraction(attractionId) {
-    selectedAttractionId = attractionId;
-    
-    // Cambiar a tab de cola
-    document.querySelectorAll('.op-section').forEach(s => s.classList.remove('active'));
-    document.getElementById('cola').classList.add('active');
-    
-    document.querySelectorAll('.op-nav-link').forEach(l => l.classList.remove('active'));
-    document.querySelector('a[href="#cola"]').classList.add('active');
-    
-    // Cargar la fila
-    loadQueueForAttraction();
-}
-
-// Cargar fila de una atracción
-async function loadQueueForAttraction() {
-    const attractionId = document.getElementById('attractionSelect').value || selectedAttractionId;
-    
-    if (!attractionId) {
-        document.getElementById('queueDisplay').innerHTML = '<p>Selecciona una atracción.</p>';
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/queue/full/${attractionId}`, {
-            headers: getAuthHeaders()
-        });
-        
-        if (response.ok) {
-            const queue = await response.json();
-            displayQueue(queue);
-        }
-    } catch (error) {
-        console.error('Error loading queue:', error);
-        document.getElementById('queueDisplay').innerHTML = '<p>Error al cargar la fila.</p>';
-    }
-}
-
-// Mostrar cola en la pantalla
-function displayQueue(queue) {
-    const display = document.getElementById('queueDisplay');
-    
-    if (!queue || queue.length === 0) {
-        display.innerHTML = '<p>La fila está vacía.</p>';
-        return;
-    }
-    
-    let html = `<p><strong>Total en fila: ${queue.length} personas</strong></p>`;
-    
-    queue.forEach((entry, index) => {
-        const isFastPass = entry.ticketType === 'FAST_PASS';
-        html += `
-            <div class="queue-entry ${isFastPass ? 'fast-pass' : ''}">
-                <div class="queue-entry-info">
-                    <div class="queue-entry-position">#${index + 1}</div>
-                    <div class="queue-entry-name">${entry.visitorName}</div>
-                    <div class="queue-entry-type">${entry.ticketType}</div>
-                </div>
-                <button class="btn-secondary" onclick="removeFromQueue(${entry.visitorId})">Remover</button>
+            <div class="status-toggle">
+                ${renderStatusButton(attraction, 'ABIERTA')}
+                ${renderStatusButton(attraction, 'MANTENIMIENTO')}
+                ${renderStatusButton(attraction, 'CLIMA')}
             </div>
-        `;
-    });
-    
-    display.innerHTML = html;
+
+            <div class="queue-preview">
+                <div class="queue-preview-header">
+                    <span>Vista previa de la cola</span>
+                    <strong>Top 3</strong>
+                </div>
+                ${renderQueuePreview(attraction.queuePreview)}
+            </div>
+        </article>
+    `).join('');
 }
 
-// Admitir siguiente visitante
-async function admitNextVisitor() {
-    const attractionId = document.getElementById('attractionSelect').value;
-    
-    if (!attractionId) {
-        alert('Selecciona una atracción');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/queue/next/${attractionId}`, {
-            headers: getAuthHeaders()
-        });
-        
-        if (response.ok) {
-            const nextVisitor = await response.json();
-            alert(`Siguiente visitante: ${nextVisitor.visitorName}`);
-            loadQueueForAttraction();
-        } else {
-            alert('La fila está vacía');
-        }
-    } catch (error) {
-        console.error('Error admitting visitor:', error);
-    }
-}
-
-// Remover de la fila
-async function removeFromQueue(visitorId) {
-    const attractionId = document.getElementById('attractionSelect').value;
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/queue/remove-visitor/${attractionId}/${visitorId}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders()
-        });
-        
-        if (response.ok) {
-            alert('Visitante removido de la fila');
-            loadQueueForAttraction();
-        }
-    } catch (error) {
-        console.error('Error removing visitor:', error);
-    }
-}
-
-// Limpiar fila
-function clearQueue() {
-    if (confirm('¿Estás seguro de que quieres limpiar la fila?')) {
-        const attractionId = document.getElementById('attractionSelect').value;
-        // En una aplicación real, habría un endpoint para esto
-        alert('Fila limpiada');
-        loadQueueForAttraction();
-    }
-}
-
-// Abrir formulario de revisión
-function openRevisionForm(attractionId) {
-    document.getElementById('attractionRevision').value = attractionId;
-    
-    document.querySelectorAll('.op-section').forEach(s => s.classList.remove('active'));
-    document.getElementById('revision').classList.add('active');
-    
-    document.querySelectorAll('.op-nav-link').forEach(l => l.classList.remove('active'));
-    document.querySelector('a[href="#revision"]').classList.add('active');
-}
-
-// Enviar revisión técnica
-function submitRevision() {
-    const attractionId = document.getElementById('attractionRevision').value;
-    const result = document.getElementById('revisionResult').value;
-    const comments = document.getElementById('revisionComments').value;
-    
-    if (!attractionId) {
-        alert('Selecciona una atracción');
-        return;
-    }
-    
-    // En una aplicación real, se enviaría al servidor
-    console.log('Revisión registrada:', { attractionId, result, comments });
-    
-    alert('Revisión técnica registrada exitosamente');
-    
-    // Limpiar formulario
-    document.getElementById('revisionComments').value = '';
-    
-    // Agregar a historial
-    addRevisionToHistory(attractionId, result, comments);
-    
-    // Recargar atracciones
-    loadAttractions();
-}
-
-// Agregar a historial de revisiones
-function addRevisionToHistory(attractionId, result, comments) {
-    const now = new Date().toLocaleString();
-    const revisionList = document.getElementById('revisionList');
-    
-    const item = document.createElement('div');
-    item.className = 'revision-item';
-    item.innerHTML = `
-        <div class="revision-date">${now}</div>
-        <div class="revision-result ${result === 'SATISFACTORIA' ? 'success' : 'fail'}">
-            ${result === 'SATISFACTORIA' ? '✅' : '❌'} ${result}
-        </div>
-        <p>${comments || 'Sin comentarios'}</p>
+function renderStatusButton(attraction, state) {
+    const activeClass = normalizeState(attraction.estado) === state ? 'active' : '';
+    return `
+        <button class="toggle-button ${activeClass}" onclick="updateAttractionState(${attraction.id}, '${state}')">
+            ${state}
+        </button>
     `;
-    
-    revisionList.insertBefore(item, revisionList.firstChild);
 }
 
-// Actualizar opciones de estado
-function updateStatusOptions() {
-    const attractionId = document.getElementById('attractionStatus').value;
-    const attraction = attractions.find(a => a.id == attractionId);
-    
-    if (attraction) {
-        document.getElementById('newStatus').value = attraction.status;
+function renderQueuePreview(queuePreview = []) {
+    if (!queuePreview.length) {
+        return '<p class="queue-empty">No hay visitantes en espera.</p>';
+    }
+
+    return queuePreview.map((entry) => `
+        <div class="queue-row ${entry.fastPass ? 'fast-pass' : ''}">
+            <span>#${entry.positionInQueue || '-'} ${entry.visitorName}</span>
+            <strong>${entry.fastPass ? 'FAST-PASS' : entry.ticketType || 'GENERAL'}</strong>
+        </div>
+    `).join('');
+}
+
+function renderRestrictionSelector() {
+    const select = document.getElementById('restrictionAttraction');
+    const attractions = Array.isArray(dashboardState.attractions) ? dashboardState.attractions : [];
+    const previousValue = select.value;
+
+    select.innerHTML = '<option value="">Selecciona una atraccion</option>';
+    attractions.forEach((attraction) => {
+        const option = document.createElement('option');
+        option.value = String(attraction.id);
+        option.textContent = `${attraction.name} (${normalizeState(attraction.estado)})`;
+        select.appendChild(option);
+    });
+
+    if (previousValue && attractions.some((item) => String(item.id) === previousValue)) {
+        select.value = previousValue;
     }
 }
 
-// Cambiar estado de atracción
-async function changeAttractionStatus() {
-    const attractionId = document.getElementById('attractionStatus').value;
-    const newStatus = document.getElementById('newStatus').value;
-    const reason = document.getElementById('statusReason').value;
-    
-    if (!attractionId || !newStatus) {
-        alert('Completa todos los campos');
+async function runRestrictionCheck() {
+    const attractionId = Number(document.getElementById('restrictionAttraction').value);
+    const visitorId = Number(document.getElementById('visitorIdInput').value);
+    const resultNode = document.getElementById('restrictionResult');
+
+    if (!attractionId || !visitorId) {
+        showAlert('Debes seleccionar una atraccion e ingresar un ID de visitante.', 'error');
         return;
     }
-    
+
     try {
-        const response = await fetch(`${API_BASE_URL}/attractions/change-status/${attractionId}`, {
+        const result = await apiFetch('/operator/restrictions/check', {
             method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-                status: newStatus,
-                reason: reason || 'Sin especificar'
-            })
+            body: JSON.stringify({ attractionId, visitorId })
         });
-        
-        if (response.ok) {
-            alert('Estado actualizado exitosamente');
-            
-            // Agregar a historial de cambios
-            const now = new Date().toLocaleString();
-            const statusChanges = document.getElementById('statusChanges');
-            const item = document.createElement('div');
-            item.className = `status-change-item ${newStatus === 'CERRADA' ? 'danger' : ''}`;
-            item.innerHTML = `
-                <div class="status-change-time">${now}</div>
-                <div><strong>Nuevo estado:</strong> ${newStatus}</div>
-                <div><strong>Motivo:</strong> ${reason || 'No especificado'}</div>
-            `;
-            statusChanges.insertBefore(item, statusChanges.firstChild);
-            
-            loadAttractions();
-        }
+
+        resultNode.className = `restriction-result ${result.allowed ? 'ok' : 'fail'}`;
+        resultNode.innerHTML = `
+            <div class="restriction-icon">${result.allowed ? 'CHECK' : 'X'}</div>
+            <div>
+                <h4>${result.visitorName} -> ${result.attractionName}</h4>
+                <p>${result.message}</p>
+                <div class="restriction-grid">
+                    <span>Edad: ${result.visitorAge} / min ${result.requiredAge}</span>
+                    <span>Altura: ${Number(result.visitorHeight).toFixed(2)} / min ${Number(result.requiredHeight).toFixed(2)} m</span>
+                    <span>Saldo: $${Number(result.visitorBalance).toFixed(2)} / costo $${Number(result.requiredBalance).toFixed(2)}</span>
+                </div>
+            </div>
+        `;
     } catch (error) {
-        console.error('Error changing status:', error);
-        alert('Error al cambiar el estado');
+        resultNode.className = 'restriction-result fail';
+        resultNode.textContent = error.message || 'No fue posible validar el visitante.';
     }
 }
 
-// Utilidades
-function getAuthHeaders() {
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': localStorage.getItem('token') || ''
-    };
+async function updateAttractionState(attractionId, estado) {
+    try {
+        await apiFetch(`/operator/attractions/${attractionId}/status`, {
+            method: 'POST',
+            body: JSON.stringify({ estado })
+        });
+        await refreshDashboard(false);
+        showAlert(`Estado actualizado a ${estado}.`, 'success');
+    } catch (error) {
+        showAlert(error.message || 'No fue posible cambiar el estado.', 'error');
+    }
+}
+
+function renderCapacityCard(capacity) {
+    const zoneName = capacity?.zoneName || dashboardState.zoneName || 'Zona';
+    const current = Number(capacity?.currentOccupancy || 0);
+    const max = Number(capacity?.maxCapacity || 0);
+    const ratio = Math.max(0, Math.min(1, Number(capacity?.ratio || 0)));
+    const full = Boolean(capacity?.full);
+
+    document.getElementById('capacityZoneName').textContent = zoneName;
+    document.getElementById('capacityNumbers').textContent = `${current} / ${max}`;
+    document.getElementById('capacityBadge').textContent = full ? 'Zona llena' : 'Disponible';
+    document.getElementById('capacityBadge').className = `capacity-badge ${full ? 'full' : ''}`;
+    document.getElementById('capacityFill').style.width = `${ratio * 100}%`;
+    document.getElementById('capacityFill').className = `capacity-fill ${full ? 'full' : ''}`;
+    document.getElementById('capacityMessage').textContent = full
+        ? 'Alerta visual: la zona alcanzo su capacidad maxima.'
+        : 'La zona aun puede recibir visitantes.';
+    document.getElementById('capacityCard').className = `capacity-card ${full ? 'full' : ''}`;
+}
+
+async function apiFetch(path, options = {}) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: localStorage.getItem('token') || '',
+            ...(options.headers || {})
+        }
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+    const payload = contentType.includes('application/json') ? await response.json() : await response.text();
+
+    if (!response.ok) {
+        const message = typeof payload === 'string' ? payload : payload.message || 'No fue posible completar la solicitud';
+        throw new Error(message);
+    }
+
+    return payload;
+}
+
+function normalizeState(state) {
+    return String(state || '').trim().toUpperCase() || 'DESCONOCIDO';
+}
+
+function formatCapacity(capacity) {
+    const current = Number(capacity?.currentOccupancy || 0);
+    const max = Number(capacity?.maxCapacity || 0);
+    return `${current} / ${max}`;
+}
+
+function showAlert(message, type = 'success') {
+    const alertNode = document.getElementById('appAlert');
+    alertNode.hidden = false;
+    alertNode.className = `app-alert ${type}`;
+    alertNode.textContent = message;
+    window.clearTimeout(showAlert.timeoutId);
+    showAlert.timeoutId = window.setTimeout(() => {
+        alertNode.hidden = true;
+    }, 3200);
 }
 
 function logout() {
+    if (refreshHandle) {
+        window.clearInterval(refreshHandle);
+    }
     localStorage.clear();
     window.location.href = '../index.html';
 }
