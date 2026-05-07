@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Admin</title>
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>TECH-PARK</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="#atracciones" class="nav-link"><i class="fas fa-ticket-alt"></i> Atracciones</a></li>
+                    <li><a href="#zonas" class="nav-link"><i class="fas fa-map"></i> Zonas</a></li>
+                    <li><a href="#operadores" class="nav-link"><i class="fas fa-users"></i> Operadores</a></li>
+                    <li><a href="#reportes" class="nav-link"><i class="fas fa-chart-bar"></i> Reportes</a></li>
+                    <li><a href="#alertas" class="nav-link"><i class="fas fa-bell"></i> Alertas</a></li>
+                    <li><a href="#mapa" class="nav-link"><i class="fas fa-map-location-dot"></i> Mapa</a></li>
+                    <li><a href="#" onclick="logout()" class="nav-link"><i class="fas fa-sign-out-alt"></i> Salir</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-bar-content">
+                    <h1>Panel de Administracion - Tech-Park UQ</h1>
+                    <div class="user-info">
+                        <span id="userDisplay">Usuario: <span id="username"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <section id="dashboard" class="section active">
+                <div class="section-header">
+                    <h2>Dashboard Principal</h2>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">V</div>
+                        <div class="stat-content">
+                            <h3>Visitantes Totales</h3>
+                            <p class="stat-value" id="totalVisitors">0</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">$</div>
+                        <div class="stat-content">
+                            <h3>Ingresos Diarios</h3>
+                            <p class="stat-value" id="dailyRevenue">$0.00</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">A</div>
+                        <div class="stat-content">
+                            <h3>Atracciones Activas</h3>
+                            <p class="stat-value" id="activeAttractions">0</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">!</div>
+                        <div class="stat-content">
+                            <h3>Alertas</h3>
+                            <p class="stat-value" id="alertCount">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="atracciones" class="section">
+                <div class="section-header">
+                    <h2>Gestion de Atracciones</h2>
+                    <button class="btn-primary" onclick="showAddAttractionForm()">+ Nueva Atraccion</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="attractionsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Visitantes</th>
+                                <th>Estado</th>
+                                <th>Tiempo Espera</th>
+                                <th>Personas en Fila</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attractionsTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="zonas" class="section">
+                <div class="section-header">
+                    <h2>Gestion de Zonas</h2>
+                    <button class="btn-primary" onclick="showAddZoneForm()">+ Nueva Zona</button>
+                </div>
+                <div class="zones-grid" id="zonesGrid"></div>
+            </section>
+
+            <section id="operadores" class="section">
+                <div class="section-header">
+                    <h2>Gestion de Operadores</h2>
+                    <button class="btn-primary" onclick="showAddOperatorForm()">+ Nuevo Operador</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="operatorsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Email</th>
+                                <th>Zona Asignada</th>
+                                <th>Atracciones</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="operatorsTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="reportes" class="section">
+                <div class="section-header">
+                    <h2>Reportes</h2>
+                    <button class="btn-primary" onclick="generateDailyReport()">Generar Reporte del Dia</button>
+                </div>
+                <div class="report-container" id="reportContainer">
+                    <p>Selecciona una opcion para generar reportes</p>
+                </div>
+            </section>
+
+            <section id="alertas" class="section">
+                <div class="section-header">
+                    <h2>Sistema de Alertas</h2>
+                </div>
+
+                <div class="alerts-grid">
+                    <button class="alert-btn" onclick="triggerWeatherAlert()">
+                        <i class="fas fa-cloud-bolt"></i> Alerta de Tormenta
+                    </button>
+                    <button class="alert-btn" onclick="triggerMaintenanceCheck()">
+                        <i class="fas fa-wrench"></i> Revisar Mantenimiento
+                    </button>
+                </div>
+
+                <div id="alertsList" class="alerts-list"></div>
+            </section>
+
+            <section id="mapa" class="section">
+                <div class="section-header">
+                    <h2>Mapa Interactivo del Parque</h2>
+                </div>
+                <div class="map-container">
+                    <canvas id="parkMap" width="800" height="600"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="attractionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('attractionModal')">&times;</span>
+            <h2 id="attractionModalTitle">Nueva Atraccion</h2>
+            <form id="attractionForm" onsubmit="saveAttraction(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group">
+                        <label for="attractionName">Nombre de la Atraccion</label>
+                        <input type="text" id="attractionName" placeholder="Nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="attractionType">Tipo de Mecanismo</label>
+                        <select id="attractionType" required>
+                            <option value="">Seleccionar tipo</option>
+                            <option value="MECANICA">Mecanica</option>
+                            <option value="MECANICA_ALTURA">Mecanica de Altura</option>
+                            <option value="ACUATICA">Acuatica</option>
+                            <option value="INFANTIL">Infantil</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="attractionCapacity">Capacidad (Personas por Ciclo)</label>
+                        <input type="number" id="attractionCapacity" placeholder="Capacidad" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="attractionMinHeight">Altura Minima Requerida (m)</label>
+                        <input type="number" id="attractionMinHeight" placeholder="Altura minima (m)" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="attractionMinAge">Edad Minima Requerida (Anios)</label>
+                        <input type="number" id="attractionMinAge" placeholder="Edad minima" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="attractionCost">Costo Adicional (USD)</label>
+                        <input type="number" id="attractionCost" placeholder="Costo adicional" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="attractionZoneId">Ubicacion (Zona del Parque)</label>
+                        <select id="attractionZoneId" required>
+                            <option value="">Seleccionar zona</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="attractionStatus">Estado Operativo</label>
+                        <select id="attractionStatus" required>
+                            <option value="ACTIVA">Activa</option>
+                            <option value="MANTENIMIENTO">Mantenimiento</option>
+                            <option value="CERRADA">Cerrada</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="attractionPosX">
+                    <input type="hidden" id="attractionPosY">
+                    <small id="attractionCoordinateHint">La ubicacion se asigna automaticamente segun la zona seleccionada.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-primary" id="attractionSubmitButton">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="queueInfoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('queueInfoModal')">&times;</span>
+            <h2 id="queueInfoModalTitle">Detalle de Fila</h2>
+            <div class="modal-body">
+                <p id="queueInfoSummary">Personas en fila: 0</p>
+                <p id="queueInfoBreakdown">Fast Pass: 0 | Familiar: 0 | General: 0</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="zoneModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('zoneModal')">&times;</span>
+            <h2>Nueva Zona</h2>
+            <form id="zoneForm" onsubmit="saveZone(event)">
+                <input type="text" id="zoneName" placeholder="Nombre" required>
+                <input type="number" id="zoneCapacity" placeholder="Capacidad maxima" required>
+                <select id="operator-select" required>
+                    <option value="">Seleccionar operador responsable</option>
+                </select>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="operatorModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('operatorModal')">&times;</span>
+            <h2>Nuevo Operador</h2>
+            <form id="operatorForm" onsubmit="saveOperator(event)">
+                <input type="text" id="operatorUsername" placeholder="Usuario" required>
+                <input type="email" id="operatorEmail" placeholder="Correo electronico">
+                <input type="password" id="operatorPassword" placeholder="Contrasena" required>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

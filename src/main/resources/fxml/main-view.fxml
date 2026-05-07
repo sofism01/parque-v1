@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.techpark.controller.MainViewController"
+            prefWidth="1024.0" prefHeight="768.0">
+    <top>
+        <HBox spacing="12.0" style="-fx-background-color: linear-gradient(to right, #0f172a, #1e293b);">
+            <padding>
+                <Insets top="16.0" right="16.0" bottom="16.0" left="16.0" />
+            </padding>
+            <children>
+                <Label text="Tech-Park UQ" style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;" />
+                <Label text="Mapa, operacion y monitoreo en una sola vista"
+                       style="-fx-text-fill: #cbd5e1; -fx-font-size: 14px;" />
+            </children>
+        </HBox>
+    </top>
+    <center>
+        <fx:include fx:id="graphView" source="graph-view.fxml" />
+    </center>
+    <right>
+        <VBox spacing="12.0" prefWidth="360.0" style="-fx-background-color: #e2e8f0;">
+            <padding>
+                <Insets top="12.0" right="12.0" bottom="12.0" left="12.0" />
+            </padding>
+            <children>
+                <fx:include fx:id="visitorPanel" source="visitor-panel.fxml" />
+                <fx:include fx:id="adminDashboard" source="admin-dashboard.fxml" />
+                <fx:include fx:id="dataImport" source="data-import.fxml" />
+            </children>
+        </VBox>
+    </right>
+</BorderPane>

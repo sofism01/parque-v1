@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operador - Tech-Park UQ</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/operator.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="operator-container">
+        <!-- Header -->
+        <div class="op-header">
+            <div class="op-header-content">
+                <h1>🎡 TECH-PARK - Panel de Operador</h1>
+                <div class="op-user-info">
+                    <span>Operador: <strong id="operatorName"></strong></span>
+                    <span id="zoneInfo"></span>
+                    <button onclick="logout()" class="btn-logout">Salir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="op-content">
+            <!-- Sidebar -->
+            <aside class="op-sidebar">
+                <nav class="op-nav">
+                    <ul>
+                        <li><a href="#atracciones" class="op-nav-link active"><i class="fas fa-ticket-alt"></i> Mi Zona</a></li>
+                        <li><a href="#cola" class="op-nav-link"><i class="fas fa-queue"></i> Fila Virtual</a></li>
+                        <li><a href="#revision" class="op-nav-link"><i class="fas fa-clipboard-check"></i> Revisión Técnica</a></li>
+                        <li><a href="#estado" class="op-nav-link"><i class="fas fa-cogs"></i> Cambiar Estado</a></li>
+                        <li><a href="#alertas" class="op-nav-link"><i class="fas fa-bell"></i> Alertas</a></li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Main Panel -->
+            <main class="op-main">
+                <!-- Mi Zona -->
+                <section id="atracciones" class="op-section active">
+                    <h2>Atracciones en Mi Zona</h2>
+                    
+                    <div class="attractions-dashboard" id="attractionsDashboard">
+                    </div>
+                </section>
+
+                <!-- Fila Virtual -->
+                <section id="cola" class="op-section">
+                    <h2>Fila Virtual - Acceso de Visitantes</h2>
+                    
+                    <div class="queue-section">
+                        <div class="queue-selector">
+                            <label for="attractionSelect">Seleccionar Atracción:</label>
+                            <select id="attractionSelect" onchange="loadQueueForAttraction()">
+                                <option value="">-- Selecciona una atracción --</option>
+                            </select>
+                        </div>
+
+                        <div id="queueDisplay" class="queue-display"></div>
+                        
+                        <div class="queue-actions">
+                            <button class="btn-primary" onclick="admitNextVisitor()">
+                                <i class="fas fa-check-circle"></i> Admitir Siguiente
+                            </button>
+                            <button class="btn-secondary" onclick="clearQueue()">
+                                <i class="fas fa-trash"></i> Limpiar Cola
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Revisión Técnica -->
+                <section id="revision" class="op-section">
+                    <h2>Revisión Técnica</h2>
+                    
+                    <div class="revision-section">
+                        <div class="revision-selector">
+                            <label for="attractionRevision">Atracción:</label>
+                            <select id="attractionRevision">
+                                <option value="">-- Selecciona una atracción --</option>
+                            </select>
+                        </div>
+
+                        <div class="revision-form">
+                            <div class="form-group">
+                                <label>Resultado de Revisión:</label>
+                                <select id="revisionResult">
+                                    <option value="SATISFACTORIA">✅ Satisfactoria</option>
+                                    <option value="INSATISFACTORIA">❌ Insatisfactoria</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Comentarios:</label>
+                                <textarea id="revisionComments" placeholder="Notas de la revisión..."></textarea>
+                            </div>
+
+                            <button class="btn-primary" onclick="submitRevision()">
+                                Registrar Revisión
+                            </button>
+                        </div>
+
+                        <div id="revisionHistory" class="revision-history">
+                            <h3>Historial de Revisiones</h3>
+                            <div id="revisionList"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Cambiar Estado -->
+                <section id="estado" class="op-section">
+                    <h2>Cambiar Estado de Atracción</h2>
+                    
+                    <div class="status-section">
+                        <div class="status-selector">
+                            <label for="attractionStatus">Atracción:</label>
+                            <select id="attractionStatus" onchange="updateStatusOptions()">
+                                <option value="">-- Selecciona una atracción --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nuevo Estado:</label>
+                            <select id="newStatus">
+                                <option value="">-- Selecciona un estado --</option>
+                                <option value="ACTIVA">✅ Activa</option>
+                                <option value="MANTENIMIENTO">🔧 En Mantenimiento</option>
+                                <option value="CERRADA">🚫 Cerrada</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Motivo (si aplica):</label>
+                            <input type="text" id="statusReason" placeholder="Ej: Revisión técnica, lluvia, etc.">
+                        </div>
+
+                        <button class="btn-primary" onclick="changeAttractionStatus()">
+                            Actualizar Estado
+                        </button>
+
+                        <div id="statusChanges" class="status-changes"></div>
+                    </div>
+                </section>
+
+                <!-- Alertas -->
+                <section id="alertas" class="op-section">
+                    <h2>Sistema de Alertas</h2>
+                    
+                    <div id="alertsList" class="alerts-list">
+                        <p>No hay alertas activas.</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/operator.js"></script>
+</body>
+</html>
