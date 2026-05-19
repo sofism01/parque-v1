@@ -148,17 +148,27 @@
     "documento": "DOC000008",
     "edad": 12,
     "estatura": 1.77,
-    "saldo": 88.0,
+    "saldo": 82.03000000000002,
     "tipo": "FAST_PASS",
-    "ubicacionActual": 1,
-    "favoritos": [],
+    "ubicacionActual": 8,
+    "favoritos": [
+      8
+    ],
     "historial": [
       3,
-      1
+      1,
+      8,
+      4,
+      8,
+      8
     ],
     "historialAtracciones": [
       "Rio Salvaje",
-      "Montana Rusa Andina"
+      "Montana Rusa Andina",
+      "Avix",
+      "Carrusel Magico",
+      "Avix",
+      "Avix"
     ],
     "notificaciones": [
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
@@ -899,10 +909,12 @@
     "documento": "DOC000047",
     "edad": 51,
     "estatura": 1.62,
-    "saldo": 61.0,
+    "saldo": 46.09999999999999,
     "tipo": "GENERAL",
-    "ubicacionActual": 1,
-    "favoritos": [],
+    "ubicacionActual": 7,
+    "favoritos": [
+      8
+    ],
     "historial": [
       7,
       6,
@@ -910,7 +922,14 @@
       2,
       3,
       3,
-      1
+      1,
+      8,
+      8,
+      8,
+      8,
+      8,
+      9,
+      7
     ],
     "historialAtracciones": [
       "1",
@@ -919,7 +938,14 @@
       "Torre Condor",
       "Rio Salvaje",
       "Rio Salvaje",
-      "Montana Rusa Andina"
+      "Montana Rusa Andina",
+      "Avix",
+      "Avix",
+      "Avix",
+      "Avix",
+      "Avix",
+      "Montaña Acuatica",
+      "Carros chocones"
     ],
     "notificaciones": [
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
