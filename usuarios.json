@@ -148,9 +148,9 @@
     "documento": "DOC000008",
     "edad": 12,
     "estatura": 1.77,
-    "saldo": 82.03000000000002,
+    "saldo": 76.05000000000003,
     "tipo": "FAST_PASS",
-    "ubicacionActual": 8,
+    "ubicacionActual": 4,
     "favoritos": [
       8
     ],
@@ -160,7 +160,14 @@
       8,
       4,
       8,
-      8
+      8,
+      10,
+      10,
+      8,
+      8,
+      4,
+      4,
+      4
     ],
     "historialAtracciones": [
       "Rio Salvaje",
@@ -168,7 +175,14 @@
       "Avix",
       "Carrusel Magico",
       "Avix",
-      "Avix"
+      "Avix",
+      "Rapidos acuaticos",
+      "Rapidos acuaticos",
+      "Avix",
+      "Avix",
+      "Carrusel Magico",
+      "Carrusel Magico",
+      "Carrusel Magico"
     ],
     "notificaciones": [
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
@@ -909,11 +923,11 @@
     "documento": "DOC000047",
     "edad": 51,
     "estatura": 1.62,
-    "saldo": 46.09999999999999,
+    "saldo": 35.66999999999998,
     "tipo": "GENERAL",
-    "ubicacionActual": 7,
+    "ubicacionActual": 4,
     "favoritos": [
-      8
+      7
     ],
     "historial": [
       7,
@@ -929,7 +943,17 @@
       8,
       8,
       9,
-      7
+      7,
+      10,
+      8,
+      8,
+      7,
+      4,
+      8,
+      4,
+      8,
+      4,
+      4
     ],
     "historialAtracciones": [
       "1",
@@ -945,7 +969,17 @@
       "Avix",
       "Avix",
       "Montaña Acuatica",
-      "Carros chocones"
+      "Carros chocones",
+      "Rapidos acuaticos",
+      "Avix",
+      "Avix",
+      "Carros chocones",
+      "Carrusel Magico",
+      "Avix",
+      "Carrusel Magico",
+      "Avix",
+      "Carrusel Magico",
+      "Carrusel Magico"
     ],
     "notificaciones": [
       "Reserva cancelada por clima en Rio Salvaje. Motivo: TORMENTA_ELECTRICA",
